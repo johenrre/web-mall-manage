@@ -1,0 +1,134 @@
+<template>
+  <a-layout class="admin-layout">
+    <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible class="side" :width="248" :collapsed-width="76">
+      <div class="brand" :class="{ compact: collapsed }">
+        <div class="brand-seal">璞</div>
+        <div v-if="!collapsed"><div class="brand-name">璞光管理</div><div class="brand-sub">PU GUANG STUDIO</div></div>
+      </div>
+      <a-menu theme="dark" mode="inline" :selected-keys="selectedKeys" :items="menuItems" @click="onMenuClick" />
+      <div class="side-foot" :class="{ compact: collapsed }">
+        <CloudServerOutlined />
+        <span v-if="!collapsed"><b>服务已连接</b><small>API · 3000</small></span>
+      </div>
+    </a-layout-sider>
+
+    <a-layout>
+      <a-layout-header class="topbar">
+        <div class="topbar-left">
+          <a-button type="text" class="collapse-btn" @click="collapsed = !collapsed">
+            <MenuUnfoldOutlined v-if="collapsed" /><MenuFoldOutlined v-else />
+          </a-button>
+          <div class="route-label"><span>工作台</span><RightOutlined /><strong>{{ route.meta.title }}</strong></div>
+        </div>
+        <div class="topbar-actions">
+          <a-tooltip title="刷新当前页面"><a-button type="text" shape="circle" @click="reloadPage"><ReloadOutlined /></a-button></a-tooltip>
+          <a-dropdown placement="bottomRight">
+            <button class="user-button">
+              <a-avatar :size="36" :src="auth.state.user?.avatar" class="user-avatar">{{ initials }}</a-avatar>
+              <span class="user-meta"><b>{{ auth.state.user?.nickname || auth.state.user?.username }}</b><small>超级管理员</small></span>
+              <DownOutlined />
+            </button>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="password" @click="passwordOpen = true"><KeyOutlined /> 修改密码</a-menu-item>
+                <a-menu-divider />
+                <a-menu-item key="logout" danger @click="confirmLogout"><LogoutOutlined /> 退出登录</a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
+      </a-layout-header>
+
+      <a-layout-content class="main-content">
+        <router-view :key="viewKey" />
+      </a-layout-content>
+    </a-layout>
+  </a-layout>
+
+  <ChangePasswordModal :open="passwordOpen" @close="passwordOpen = false" @changed="afterPasswordChanged" />
+</template>
+
+<script setup lang="ts">
+import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Modal } from 'ant-design-vue'
+import {
+  AppstoreOutlined, BankOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
+  DownOutlined, GiftOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+  PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShoppingCartOutlined,
+  SkinOutlined, SolutionOutlined, TeamOutlined, ToolOutlined,
+} from '@ant-design/icons-vue'
+import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
+import { get } from '@/api/http'
+import { useAuth } from '@/stores/auth'
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuth()
+const collapsed = ref(window.innerWidth < 1100)
+const passwordOpen = ref(false)
+const refreshId = ref(0)
+const notifications = ref({ paidPendingShipCount: 0, unreadRefundMessageOrders: 0 })
+let timer: number | undefined
+
+const initials = computed(() => (auth.state.user?.nickname || auth.state.user?.username || '管').slice(0, 1).toUpperCase())
+const selectedKeys = computed(() => [String(route.name || 'stats')])
+const viewKey = computed(() => `${route.fullPath}:${refreshId.value}`)
+
+function labelWithBadge(label: string, count: number) {
+  return h('div', { class: 'menu-label' }, [h('span', label), count > 0 ? h('span', { class: 'menu-count' }, count > 99 ? '99+' : count) : null])
+}
+
+const menuItems = computed(() => [
+  { key: 'stats', icon: () => h(BarChartOutlined), label: '经营概览' },
+  { type: 'group', label: collapsed.value ? '' : '交易与用户', children: [
+    { key: 'orders', icon: () => h(ShoppingCartOutlined), label: labelWithBadge('订单管理', notifications.value.paidPendingShipCount) },
+    { key: 'aftersales', icon: () => h(SolutionOutlined), label: labelWithBadge('售后管理', notifications.value.unreadRefundMessageOrders) },
+    { key: 'withdraws', icon: () => h(BankOutlined), label: '提现管理' },
+    { key: 'coupons', icon: () => h(GiftOutlined), label: '现金卡券' },
+    { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' },
+  ]},
+  { type: 'group', label: collapsed.value ? '' : '商品与内容', children: [
+    { key: 'beads', icon: () => h(AppstoreOutlined), label: '盘珠管理' },
+    { key: 'designs', icon: () => h(PictureOutlined), label: '设计管理' },
+    { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' },
+  ]},
+  { type: 'group', label: collapsed.value ? '' : '商城配置', children: [
+    { key: 'checkout-options', icon: () => h(SkinOutlined), label: '定制选项' },
+    { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
+  ]},
+])
+
+function onMenuClick({ key }: { key: string }) { void router.push({ name: key }) }
+function reloadPage() { refreshId.value += 1 }
+
+async function loadNotifications() {
+  try { notifications.value = await get('/api/admin/notifications_summary') } catch { /* 登录态拦截器负责处理 */ }
+}
+
+function confirmLogout() {
+  Modal.confirm({
+    title: '确认退出登录？',
+    content: '退出后需要重新输入管理员账号和密码。',
+    okText: '退出',
+    cancelText: '取消',
+    async onOk() { await auth.logout(); await router.replace('/login') },
+  })
+}
+
+async function afterPasswordChanged() {
+  passwordOpen.value = false
+  await auth.logout()
+  await router.replace('/login')
+}
+
+onMounted(() => { void loadNotifications(); timer = window.setInterval(loadNotifications, 20_000) })
+onBeforeUnmount(() => timer && window.clearInterval(timer))
+</script>
+
+<style scoped>
+.admin-layout{min-height:100vh}.side{position:fixed!important;inset:0 auto 0 0;z-index:20;overflow:auto;background:linear-gradient(180deg,#153f35 0%,#102e28 100%)!important;box-shadow:8px 0 34px rgba(16,52,43,.12)}
+.side+.ant-layout{margin-left:248px;transition:margin-left .2s}.side.ant-layout-sider-collapsed+.ant-layout{margin-left:76px}.brand{height:88px;display:flex;align-items:center;gap:13px;padding:0 22px;color:white}.brand.compact{justify-content:center;padding:0}.brand-seal{display:grid;place-items:center;flex:0 0 42px;height:42px;border:1px solid rgba(232,216,174,.75);border-radius:50%;color:#e8d8ae;font:22px Georgia,serif}.brand-name{font:700 18px Georgia,'Noto Serif SC',serif}.brand-sub{margin-top:3px;color:rgba(255,255,255,.45);font-size:8px;letter-spacing:.16em}.side-foot{position:absolute;bottom:20px;left:16px;right:16px;display:flex;align-items:center;gap:10px;padding:12px;color:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.04)}.side-foot.compact{justify-content:center}.side-foot span{display:flex;flex-direction:column}.side-foot b{font-size:12px}.side-foot small{margin-top:2px;color:rgba(255,255,255,.35);font-size:9px}.topbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;height:68px;padding:0 26px;border-bottom:1px solid rgba(31,104,84,.08);background:rgba(255,255,255,.88);backdrop-filter:blur(16px)}.topbar-left,.topbar-actions{display:flex;align-items:center;gap:12px}.collapse-btn{font-size:18px}.route-label{display:flex;align-items:center;gap:8px;color:#9ba6a1;font-size:13px}.route-label strong{color:#40544d}.user-button{display:flex;align-items:center;gap:10px;padding:6px 8px;border:0;border-radius:12px;color:#42564f;background:transparent;cursor:pointer}.user-button:hover{background:#f0f5f2}.user-avatar{color:#fff;background:linear-gradient(135deg,#327b65,#b99455)}.user-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:82px}.user-meta b{max-width:120px;overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}.user-meta small{margin-top:2px;color:#9aa6a1;font-size:10px}.main-content{min-height:calc(100vh - 68px);padding:26px}.menu-label{display:flex;align-items:center;justify-content:space-between;gap:8px}.menu-count{min-width:22px;height:18px;padding:0 6px;border-radius:9px;color:#fff;background:#c58b45;font-size:10px;line-height:18px;text-align:center}
+:deep(.ant-menu-dark){background:transparent}:deep(.ant-menu-item-group-title){padding:18px 24px 8px!important;color:rgba(255,255,255,.32)!important;font-size:10px;letter-spacing:.12em}:deep(.ant-menu-item){margin-inline:12px!important;width:calc(100% - 24px)!important}:deep(.ant-menu-item-selected){box-shadow:inset 3px 0 #d7bb7b}
+@media(max-width:768px){.side{position:fixed!important}.side:not(.ant-layout-sider-collapsed){width:248px!important;min-width:248px!important}.side+.ant-layout,.side.ant-layout-sider-collapsed+.ant-layout{margin-left:76px}.topbar{padding:0 12px}.route-label span,.route-label :deep(svg),.user-meta{display:none}.main-content{padding:18px 12px}}
+</style>

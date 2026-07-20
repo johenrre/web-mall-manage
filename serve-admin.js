@@ -1,18 +1,18 @@
 /**
- * 后台管理页面 admin.html 静态服务
- * - 提供 admin.html 及静态资源
- * - 代理 /backend/api/* 到 backend-node (http://127.0.0.1:3000/api/*)
- * - 代理 /uploads/* 到 backend-node (http://127.0.0.1:3000/uploads/*)
+ * Vue 管理后台生产构建静态服务。
+ * 使用前先执行 npm run build，再执行 npm run serve。
  */
-const http = require('node:http');
-const path = require('node:path');
-const fs = require('node:fs');
+import http from 'node:http'
+import path from 'node:path'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-const PORT = 3001;
-const BACKEND_TARGET = 'http://127.0.0.1:3000';
-const ROOT = __dirname;
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// MIME 类型映射
+const PORT = Number(process.env.ADMIN_PORT || 3001)
+const BACKEND_TARGET = process.env.BACKEND_TARGET || 'http://127.0.0.1:3000'
+const ROOT = path.resolve(__dirname, 'dist')
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -26,101 +26,64 @@ const MIME = {
   '.ico': 'image/x-icon',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
-  '.txt': 'text/plain; charset=utf-8',
-};
+}
 
-/** 代理请求到后端 */
 function proxyRequest(req, res, targetPath) {
-  const targetUrl = new URL(targetPath, BACKEND_TARGET);
-  const options = {
-    hostname: targetUrl.hostname,
-    port: targetUrl.port,
-    path: targetUrl.pathname + targetUrl.search,
-    method: req.method,
-    headers: { ...req.headers },
-  };
-
-  // 修正 host header
-  delete options.headers.host;
-
-  const proxyReq = http.request(options, (proxyRes) => {
-    // 转发后端响应头
-    const statusCode = proxyRes.statusCode;
-    const headers = { ...proxyRes.headers };
-    delete headers['content-encoding']; // 避免压缩问题
-    res.writeHead(statusCode, headers);
-    proxyRes.pipe(res);
-  });
-
-  proxyReq.on('error', (err) => {
-    console.error('[proxy error]', err.message);
-    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ code: 502, message: '后端服务不可用' }));
-  });
-
-  // 转发请求体
-  req.pipe(proxyReq);
+  const targetUrl = new URL(targetPath, BACKEND_TARGET)
+  const headers = { ...req.headers }
+  delete headers.host
+  const proxyReq = http.request(
+    { hostname: targetUrl.hostname, port: targetUrl.port, path: targetUrl.pathname + targetUrl.search, method: req.method, headers },
+    (proxyRes) => {
+      const responseHeaders = { ...proxyRes.headers }
+      delete responseHeaders['content-encoding']
+      res.writeHead(proxyRes.statusCode || 502, responseHeaders)
+      proxyRes.pipe(res)
+    },
+  )
+  proxyReq.on('error', () => {
+    res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify({ code: 502, message: '后端服务不可用' }))
+  })
+  req.pipe(proxyReq)
 }
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-  const pathname = url.pathname;
-
-  console.log(`[${req.method}] ${pathname}`);
-
-  // === 代理规则 ===
-  // /backend/api/* → http://127.0.0.1:3000/api/*
-  if (pathname.startsWith('/backend/api/')) {
-    const targetPath = pathname.replace(/^\/backend/, '') + url.search;
-    return proxyRequest(req, res, targetPath);
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
+    return proxyRequest(req, res, url.pathname + url.search)
+  }
+  // 保留旧路径兼容：/backend/api/* → /api/*
+  if (url.pathname.startsWith('/backend/api/')) {
+    return proxyRequest(req, res, url.pathname.replace(/^\/backend/, '') + url.search)
   }
 
-  // /uploads/* → http://127.0.0.1:3000/uploads/*
-  if (pathname.startsWith('/uploads/')) {
-    return proxyRequest(req, res, pathname + url.search);
+  const requested = url.pathname === '/' ? 'index.html' : url.pathname.replace(/^\/+/, '')
+  const filePath = path.resolve(ROOT, requested)
+  if (!filePath.startsWith(`${ROOT}${path.sep}`) && filePath !== path.join(ROOT, 'index.html')) {
+    res.writeHead(403).end('Forbidden')
+    return
   }
 
-  // === 静态文件服务 ===
-  let filePath = path.join(ROOT, pathname === '/' ? 'admin.html' : pathname);
-
-  // 安全校验：防止目录遍历
-  if (!filePath.startsWith(ROOT)) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        // 找不到则当作 SPA fallback 到 admin.html
-        const fallback = path.join(ROOT, 'admin.html');
-        fs.readFile(fallback, (err2, data2) => {
-          if (err2) {
-            res.writeHead(404);
-            res.end('Not Found');
-            return;
-          }
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          res.end(data2);
-        });
-      } else {
-        res.writeHead(500);
-        res.end('Internal Server Error');
-      }
-      return;
+  fs.readFile(filePath, (error, data) => {
+    if (!error) {
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' })
+      res.end(data)
+      return
     }
-
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  });
-});
+    fs.readFile(path.join(ROOT, 'index.html'), (fallbackError, fallback) => {
+      if (fallbackError) {
+        res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('管理后台尚未构建，请先执行 npm run build')
+        return
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(fallback)
+    })
+  })
+})
 
 server.listen(PORT, () => {
-  console.log(`\n  ✅ 后台管理页面已启动`);
-  console.log(`  📍 地址: http://localhost:${PORT}/`);
-  console.log(`  🔗 后端代理: ${BACKEND_TARGET}`);
-  console.log(`  ⚡ 按 Ctrl+C 停止服务\n`);
-});
+  console.log(`管理后台已启动：http://localhost:${PORT}`)
+  console.log(`后端代理：${BACKEND_TARGET}`)
+})

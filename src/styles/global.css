@@ -1,0 +1,151 @@
+:root {
+  color: #20322d;
+  background: #f3f6f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 93% 5%, rgba(210, 181, 122, 0.12), transparent 25rem),
+    #f3f6f4;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-title {
+  margin: 0;
+  color: #18382f;
+  font-family: Georgia, 'Noto Serif SC', serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.page-description {
+  margin: 7px 0 0;
+  color: #75847f;
+  font-size: 14px;
+}
+
+.surface-card {
+  border: 1px solid rgba(30, 89, 73, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(24, 61, 52, 0.055);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.muted {
+  color: #89958f;
+}
+
+.money {
+  color: #b57a2d;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.mono {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+}
+
+.image-thumb {
+  width: 46px;
+  height: 46px;
+  border: 1px solid #e4ebe8;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #f5f7f6;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.setting-section {
+  padding: 20px;
+  border: 1px solid #e7eeeb;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.setting-section-title {
+  margin: 0 0 18px;
+  color: #28493f;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.danger-note {
+  padding: 12px 14px;
+  border: 1px solid #f0d5d1;
+  border-radius: 10px;
+  color: #984a45;
+  background: #fff8f7;
+}
+
+@media (max-width: 768px) {
+  .page-heading {
+    flex-direction: column;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .span-2 {
+    grid-column: auto;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+}
