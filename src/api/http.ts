@@ -68,16 +68,39 @@ export function post<T>(url: string, data?: unknown) {
   return request<T>({ method: 'POST', url, data })
 }
 
-export async function uploadImage(file: File): Promise<{ url: string; source?: string }> {
+export interface UploadedImage {
+  url: string
+  source?: string
+}
+
+function normalizeUploadedImage(result: UploadedImage): UploadedImage {
+  if (result.source !== 'local') return result
+  try {
+    const parsed = new URL(result.url, window.location.origin)
+    const uploadPathIndex = parsed.pathname.indexOf('/uploads/')
+    if (uploadPathIndex >= 0) {
+      return {
+        ...result,
+        url: `${parsed.pathname.slice(uploadPathIndex)}${parsed.search}${parsed.hash}`,
+      }
+    }
+  } catch {
+    // 无法解析时保留后端原始地址，由页面展示具体错误。
+  }
+  return result
+}
+
+export async function uploadImage(file: File): Promise<UploadedImage> {
   if (file.size > 5 * 1024 * 1024) throw new ApiError('图片大小不能超过 5 MB')
   const form = new FormData()
   form.append('file', file)
-  return request({
+  const result = await request<UploadedImage>({
     method: 'POST',
     url: '/api/upload/image',
     data: form,
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+  return normalizeUploadedImage(result)
 }
 
 export function errorMessage(error: unknown): string {
