@@ -19,7 +19,7 @@ const router = createRouter({
         { path: 'users', name: 'users', component: () => import('@/views/UsersView.vue'), meta: { title: '用户管理' } },
         { path: 'designs', name: 'designs', component: () => import('@/views/DesignsView.vue'), meta: { title: '设计管理' } },
         { path: 'creators', name: 'creators', component: () => import('@/views/CreatorsView.vue'), meta: { title: '设计师管理' } },
-        { path: 'checkout-options', name: 'checkout-options', component: () => import('@/views/CheckoutOptionsView.vue'), meta: { title: '定制选项' } },
+        { path: 'checkout-options', name: 'checkout-options', component: () => import('@/views/CheckoutOptionsView.vue'), meta: { title: '结算选项' } },
         { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '系统设置' } },
       ],
     },

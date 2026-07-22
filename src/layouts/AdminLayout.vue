@@ -60,8 +60,8 @@ import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Modal } from 'ant-design-vue'
 import {
-  AppstoreOutlined, BankOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
-  DownOutlined, GiftOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+  AppstoreOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
+  DownOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShoppingCartOutlined,
   SkinOutlined, SolutionOutlined, TeamOutlined, ToolOutlined,
 } from '@ant-design/icons-vue'
@@ -92,8 +92,9 @@ const menuItems = computed(() => [
   { type: 'group', label: collapsed.value ? '' : '交易与用户', children: [
     { key: 'orders', icon: () => h(ShoppingCartOutlined), label: labelWithBadge('订单管理', notifications.value.paidPendingShipCount) },
     { key: 'aftersales', icon: () => h(SolutionOutlined), label: labelWithBadge('售后管理', notifications.value.unreadRefundMessageOrders) },
-    { key: 'withdraws', icon: () => h(BankOutlined), label: '提现管理' },
-    { key: 'coupons', icon: () => h(GiftOutlined), label: '现金卡券' },
+    // 小程序第一阶段暂不展示提现和现金卡券入口；页面与路由保留，后续可直接恢复。
+    // { key: 'withdraws', icon: () => h(BankOutlined), label: '提现管理' },
+    // { key: 'coupons', icon: () => h(GiftOutlined), label: '现金卡券' },
     { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' },
   ]},
   { type: 'group', label: collapsed.value ? '' : '商品与内容', children: [
@@ -102,7 +103,7 @@ const menuItems = computed(() => [
     { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' },
   ]},
   { type: 'group', label: collapsed.value ? '' : '商城配置', children: [
-    { key: 'checkout-options', icon: () => h(SkinOutlined), label: '定制选项' },
+    { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
     { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
   ]},
 ])

@@ -99,7 +99,7 @@
                         <PictureOutlined v-else />
                       </div>
                       <div class="slide-image-inputs">
-                        <a-input v-model:value="record.image" placeholder="图片地址或上传图片" />
+                        <a-input v-model:value="record.image" placeholder="图片地址或上传图片" @blur="record.image = normalizeSlideImage(record.image)" />
                         <a-upload
                           :show-upload-list="false"
                           accept="image/jpeg,image/png,image/gif,image/webp"
@@ -303,6 +303,10 @@ function text(value: unknown): string {
   return String(value ?? '').trim()
 }
 
+function normalizeSlideImage(value: unknown): string {
+  return text(value).replace(/^["']+|["']+$/g, '')
+}
+
 function boolValue(value: unknown): boolean {
   return value === true || value === 1 || value === '1' || value === 'true'
 }
@@ -311,7 +315,7 @@ function createSlide(source: any = {}): EditableHomeSlide {
   slideSequence += 1
   return {
     rowKey: `slide-${slideSequence}`,
-    image: text(source.image || source.imageUrl || source.image_url || source.url),
+    image: normalizeSlideImage(source.image || source.imageUrl || source.image_url || source.url),
     title: text(source.title),
     description: text(source.description || source.subtitle || source.desc),
   }
@@ -330,7 +334,7 @@ function parseSlides(value: unknown): EditableHomeSlide[] {
 function serializeSlides(): string {
   if (!slides.value.length) return ''
   return JSON.stringify(slides.value.map((slide) => ({
-    image: text(slide.image),
+    image: normalizeSlideImage(slide.image),
     title: text(slide.title),
     description: text(slide.description),
   })))
@@ -410,7 +414,8 @@ async function save() {
   ) {
     return message.warning('分佣比例必须在 0% 到 100% 之间')
   }
-  if (slides.value.some((slide) => !text(slide.image))) {
+  for (const slide of slides.value) slide.image = normalizeSlideImage(slide.image)
+  if (slides.value.some((slide) => !slide.image)) {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
   for (const item of jsonEditors) {
