@@ -31,11 +31,11 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://127.0.0.1:5173',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://127.0.0.1:5173',
         changeOrigin: true,
       },
     },
@@ -45,8 +45,8 @@ export default defineConfig({
     port: 3001,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:3000',
-      '/uploads': 'http://127.0.0.1:3000',
+      '/api': 'http://127.0.0.1:5173',
+      '/uploads': 'http://127.0.0.1:5173',
     },
   },
   build: {
