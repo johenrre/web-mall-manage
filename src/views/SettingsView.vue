@@ -63,6 +63,15 @@
               <p>管理小程序名称、首页轮播和用户可见信息。</p>
             </div>
 
+            <a-alert
+              :type="storageAlertType"
+              show-icon
+              :message="storageAlertMessage"
+              :description="storageAlertDescription"
+            >
+              <template #action><a-button size="small" @click="loadStorageStatus">刷新</a-button></template>
+            </a-alert>
+
             <section class="setting-section">
               <h3 class="setting-section-title">基础展示</h3>
               <a-form-item label="小程序名称">
@@ -227,7 +236,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   ApiOutlined,
@@ -256,10 +265,22 @@ interface EditableHomeSlide {
   description: string
 }
 
+interface StorageStatus {
+  provider: 'qiniu' | 'local'
+  qiniu: {
+    configured: boolean
+    partiallyConfigured: boolean
+    missing: string[]
+    bucket: string
+    cdnUrl: string
+  }
+}
+
 const tab = ref('business')
 const loading = ref(false)
 const saving = ref(false)
 const uploadingSlideKey = ref('')
+const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const contact = reactive({ wechatId: '', wechatQr: '' })
 const slides = ref<EditableHomeSlide[]>([])
@@ -298,6 +319,27 @@ const stringKeys = [
   ...jsonEditors.map((item) => item.key),
 ]
 const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
+
+const storageAlertType = computed(() => {
+  if (!storageStatus.value) return 'info'
+  if (storageStatus.value.qiniu.configured) return 'success'
+  return storageStatus.value.qiniu.partiallyConfigured ? 'error' : 'info'
+})
+
+const storageAlertMessage = computed(() => {
+  if (!storageStatus.value) return '正在检查图片存储配置'
+  if (storageStatus.value.qiniu.configured) return '七牛云配置完整'
+  if (storageStatus.value.qiniu.partiallyConfigured) return '七牛云配置不完整'
+  return '图片上传使用本地开发存储'
+})
+
+const storageAlertDescription = computed(() => {
+  const status = storageStatus.value
+  if (!status) return '请稍候'
+  if (status.qiniu.configured) return `图片上传将使用七牛云；实际权限会在上传时校验。空间：${status.qiniu.bucket}；访问域名：${status.qiniu.cdnUrl}`
+  if (status.qiniu.partiallyConfigured) return `缺少：${status.qiniu.missing.join('、')}`
+  return '未配置七牛云时才保存到本地；正式环境建议配置七牛云。'
+})
 
 function text(value: unknown): string {
   return String(value ?? '').trim()
@@ -363,6 +405,14 @@ async function load() {
   }
 }
 
+async function loadStorageStatus() {
+  try {
+    storageStatus.value = await get<StorageStatus>('/api/admin/storage_status')
+  } catch (error) {
+    message.error(errorMessage(error))
+  }
+}
+
 function addSlide() {
   slides.value.push(createSlide())
 }
@@ -396,7 +446,7 @@ async function uploadSlide(options: any, slide: EditableHomeSlide) {
     const result = await uploadImage(options.file as File)
     slide.image = result.url
     options.onSuccess?.(result)
-    message.success('轮播图片上传成功，请继续填写内容')
+    message.success(result.source === 'qiniu' ? '轮播图片已上传到七牛云，请继续填写内容' : '轮播图片已上传到本地，请继续填写内容')
   } catch (error) {
     message.error(errorMessage(error))
     options.onError?.(error as Error)
@@ -450,7 +500,10 @@ async function save() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadStorageStatus()
+})
 </script>
 
 <style scoped>

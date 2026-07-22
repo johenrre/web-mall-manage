@@ -70,7 +70,10 @@ export function post<T>(url: string, data?: unknown) {
 
 export interface UploadedImage {
   url: string
-  source?: string
+  path: string
+  source: 'qiniu' | 'local'
+  mime: string
+  size: number
 }
 
 function normalizeUploadedImage(result: UploadedImage): UploadedImage {
@@ -92,6 +95,9 @@ function normalizeUploadedImage(result: UploadedImage): UploadedImage {
 
 export async function uploadImage(file: File): Promise<UploadedImage> {
   if (file.size > 5 * 1024 * 1024) throw new ApiError('图片大小不能超过 5 MB')
+  if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+    throw new ApiError('仅支持 JPG、PNG、GIF、WebP 图片')
+  }
   const form = new FormData()
   form.append('file', file)
   const result = await request<UploadedImage>({

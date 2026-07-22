@@ -8,7 +8,7 @@
       <a-menu theme="dark" mode="inline" :selected-keys="selectedKeys" :items="menuItems" @click="onMenuClick" />
       <div class="side-foot" :class="{ compact: collapsed }">
         <CloudServerOutlined />
-        <span v-if="!collapsed"><b>服务已连接</b><small>API · 3000</small></span>
+        <span v-if="!collapsed"><b>服务已连接</b><small>API · 5173</small></span>
       </div>
     </a-layout-sider>
     <button
