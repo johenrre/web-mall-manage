@@ -1,7 +1,7 @@
 <template>
   <div class="page-shell bead-catalog">
     <PageHeader title="盘珠管理" description="统一维护珠材商品资料、图片素材与 DIY 渲染参数">
-      <a-button @click="categoryOpen=true"><ApartmentOutlined /> 分类设置</a-button>
+      <a-button @click="openCategorySettings"><ApartmentOutlined /> 分类设置</a-button>
       <a-button type="primary" @click="openCreate"><PlusOutlined /> 新增盘珠</a-button>
     </PageHeader>
 
@@ -85,7 +85,7 @@
             <div class="commerce-cell">
               <div><b>{{ materialLabels[record.type]||record.type||'未设置' }}</b><span>{{ formatNumber(record.size) }} mm</span></div>
               <strong>{{ money(record.price) }}</strong>
-              <small>排序 {{ record.category_sort_order ?? 100 }}</small>
+              <small>素材排序 {{ record.category_sort_order ?? 100 }}</small>
             </div>
           </template>
 
@@ -157,7 +157,7 @@
                 <a-form-item label="中文名称" name="name"><a-input v-model:value="form.name" placeholder="例如：锆石蝴蝶吊坠" /></a-form-item>
                 <a-form-item label="英文名称"><a-input v-model:value="form.name_en" placeholder="留空将自动翻译" /></a-form-item>
                 <a-form-item label="繁体名称"><a-input v-model:value="form.name_zh_tw" placeholder="留空将自动转换" /></a-form-item>
-                <a-form-item label="分类排序"><a-input-number v-model:value="form.category_sort_order" :min="1" style="width:100%" /></a-form-item>
+                <a-form-item label="素材排序"><a-input-number v-model:value="form.category_sort_order" :min="1" style="width:100%" /></a-form-item>
                 <a-form-item label="主分类" name="category"><a-select v-model:value="form.category" :options="categories.map(x=>({label:x.label,value:x.label}))" @change="categoryChanged" /></a-form-item>
                 <a-form-item :label="isAccessory?'配饰子分类':'色系'" :name="isAccessory?'subcategory':'color_family'">
                   <a-select v-if="currentSubcategories.length" :value="isAccessory?form.subcategory:form.color_family" :options="currentSubcategories.map(x=>({label:x.label,value:x.label}))" @change="subChanged" />
@@ -235,16 +235,60 @@
       </template>
     </a-drawer>
 
-    <a-modal v-model:open="categoryOpen" title="盘珠分类设置" :width="780" :footer="null">
-      <div class="config-intro"><SettingOutlined /><span><b>分类会同步到小程序素材筛选</b><small>建议保持分类精简、命名稳定，调整顺序后及时保存。</small></span></div>
+    <a-modal v-model:open="categoryOpen" title="盘珠分类设置" :width="820" :footer="null" @cancel="resetCategoryDrafts">
+      <div class="config-intro"><SettingOutlined /><span><b>这里是小程序素材分类的唯一排序来源</b><small>可拖动或使用箭头排序；修改名称会同步更新已有珠材，保存后小程序按此顺序展示。</small></span></div>
       <a-tabs v-model:active-key="categoryTab">
         <a-tab-pane key="main" tab="主分类">
-          <div class="category-editor"><div v-for="(cat,index) in categories" :key="cat.id" class="category-row"><HolderOutlined class="drag"/><a-input v-model:value="cat.label"/><a-input v-model:value="cat.id" disabled/><a-button :disabled="index===0" @click="moveCategory(index,-1)"><ArrowUpOutlined/></a-button><a-button :disabled="index===categories.length-1" @click="moveCategory(index,1)"><ArrowDownOutlined/></a-button><a-button danger @click="deleteCategory(index)"><DeleteOutlined/></a-button></div></div>
+          <div class="config-column-head"><span>顺序</span><span>显示名称</span><span>唯一编码</span><span>操作</span></div>
+          <div class="category-editor">
+            <div
+              v-for="(cat,index) in categories"
+              :key="cat.id"
+              class="category-row"
+              :class="{dragging:draggingCategory===index}"
+              draggable="true"
+              @dragstart="startCategoryDrag(index,$event)"
+              @dragover.prevent
+              @drop="dropCategory(index)"
+              @dragend="draggingCategory=null"
+            >
+              <div class="sort-handle"><HolderOutlined /><b>{{ index+1 }}</b></div>
+              <div class="config-field"><a-input v-model:value="cat.label"/><small>{{ countByCategory(cat.label) }} 个素材</small></div>
+              <a-input v-model:value="cat.id" disabled/>
+              <a-button :disabled="index===0" @click="moveCategory(index,-1)"><ArrowUpOutlined/></a-button>
+              <a-button :disabled="index===categories.length-1" @click="moveCategory(index,1)"><ArrowDownOutlined/></a-button>
+              <a-button danger @click="deleteCategory(index)"><DeleteOutlined/></a-button>
+            </div>
+          </div>
           <div class="config-actions"><a-button @click="addCategory"><PlusOutlined/> 新增分类</a-button><a-button type="primary" :loading="savingConfig" @click="saveCategories">保存主分类</a-button></div>
         </a-tab-pane>
         <a-tab-pane key="sub" tab="子分类 / 色系">
           <a-segmented v-model:value="activeSubId" :options="categories.map(x=>({label:x.label,value:x.id}))" block />
-          <div class="category-editor sub-editor"><div v-for="(sub,index) in currentConfigSubs" :key="`${sub.id}-${index}`" class="category-row"><HolderOutlined class="drag"/><a-input v-model:value="sub.label" placeholder="显示名称"/><a-input v-model:value="sub.id" placeholder="唯一编码"/><a-button :disabled="index===0" @click="moveSub(index,-1)"><ArrowUpOutlined/></a-button><a-button :disabled="index===currentConfigSubs.length-1" @click="moveSub(index,1)"><ArrowDownOutlined/></a-button><a-button danger @click="deleteSub(index)"><DeleteOutlined/></a-button></div></div>
+          <div class="subcategory-tip">
+            <b>{{ categories.find(item=>item.id===activeSubId)?.label||'当前分类' }}</b>
+            <span>小程序左侧筛选将严格按照以下顺序和完整名称显示。</span>
+          </div>
+          <div class="config-column-head sub-head"><span>顺序</span><span>显示名称</span><span>唯一编码</span><span>操作</span></div>
+          <div class="category-editor sub-editor">
+            <div
+              v-for="(sub,index) in currentConfigSubs"
+              :key="`${sub.id}-${index}`"
+              class="category-row"
+              :class="{dragging:draggingSub===index}"
+              draggable="true"
+              @dragstart="startSubDrag(index,$event)"
+              @dragover.prevent
+              @drop="dropSub(index)"
+              @dragend="draggingSub=null"
+            >
+              <div class="sort-handle"><HolderOutlined /><b>{{ index+1 }}</b></div>
+              <div class="config-field"><a-input v-model:value="sub.label" placeholder="显示名称"/><small>{{ countBySubcategory(activeSubId,sub.label) }} 个素材</small></div>
+              <a-input v-model:value="sub.id" placeholder="唯一编码"/>
+              <a-button :disabled="index===0" @click="moveSub(index,-1)"><ArrowUpOutlined/></a-button>
+              <a-button :disabled="index===currentConfigSubs.length-1" @click="moveSub(index,1)"><ArrowDownOutlined/></a-button>
+              <a-button danger @click="deleteSub(index)"><DeleteOutlined/></a-button>
+            </div>
+          </div>
           <div class="config-actions"><a-button @click="addSub"><PlusOutlined/> 新增{{ activeSubId==='peishi'?'子分类':'色系' }}</a-button><a-button type="primary" :loading="savingConfig" @click="saveSubcategories">保存配置</a-button></div>
         </a-tab-pane>
       </a-tabs>
@@ -271,6 +315,8 @@ type RenderFilter = ''|'irregular'|'top'|'canvas'|'issues'
 const defaults:Category[]=[{id:'crystal',label:'水晶'},{id:'chxiang',label:'沉香'},{id:'puti',label:'菩提'},{id:'wenwan',label:'文玩'},{id:'peishi',label:'配饰'}]
 const loading=ref(false),saving=ref(false),savingConfig=ref(false),beads=ref<any[]>([]),keyword=ref(''),activeCategory=ref(''),subcategoryFilter=ref<string|undefined>(),materialFilter=ref<string|undefined>(),renderFilter=ref<RenderFilter>(''),editorOpen=ref(false),categoryOpen=ref(false),categoryTab=ref('main'),editorTab=ref('base'),formRef=ref<FormInstance>()
 const categories=ref<Category[]>(structuredClone(defaults)),subcategories=ref<Record<string,Category[]>>({}),activeSubId=ref('crystal')
+const savedCategories=ref<Category[]>(structuredClone(defaults)),savedSubcategories=ref<Record<string,Category[]>>({})
+const draggingCategory=ref<number|null>(null),draggingSub=ref<number|null>(null)
 const materialLabels:Record<string,string>={wood:'木质',stone:'石质',glass:'玻璃',metal:'金属',crystal:'水晶',peishi:'配饰',accessory:'配饰',chenxiang:'沉香'}
 const materialOptions=Object.entries(materialLabels).map(([value,label])=>({value,label}))
 const stringingPositionOptions=[{label:'中心穿线',value:'center'},{label:'顶部穿线',value:'top'}]
@@ -330,6 +376,14 @@ function signedNumber(value:unknown){const number=finiteNumber(value,0);return n
 function layerText(row:any){const explicit=Number(row.layer);return row.layer!==null&&row.layer!==undefined&&row.layer!==''&&Number.isFinite(explicit)?String(explicit):`${booleanValue(row.is_irregular)?25:20} 自动`}
 function hasDataIssue(item:any){return !String(item.image||'').trim()||(item.stringing_position==='top'&&!positiveNumber(item.stringing_width_mm))}
 function countByCategory(label:string){return beads.value.filter(item=>item.category===label).length}
+function cloneCategories(value:Category[]){return value.map(item=>({...item}))}
+function cloneSubcategories(value:Record<string,Category[]>){return Object.fromEntries(Object.entries(value).map(([key,items])=>[key,cloneCategories(items)]))}
+function countBySubcategory(categoryId:string,label:string){
+  const category=categories.value.find(item=>item.id===categoryId)
+  if(!category)return 0
+  const field=categoryId==='peishi'?'subcategory':'color_family'
+  return beads.value.filter(item=>item.category===category.label&&String(item[field]||'')===label).length
+}
 
 function selectCategory(label:string){activeCategory.value=label;subcategoryFilter.value=undefined}
 function applyQuickFilter(value:RenderFilter){keyword.value='';activeCategory.value='';subcategoryFilter.value=undefined;materialFilter.value=undefined;renderFilter.value=value}
@@ -343,6 +397,8 @@ async function load(){
     try{const parsed=JSON.parse(settings.bead_main_categories_json||'[]');if(Array.isArray(parsed)&&parsed.length)categories.value=parsed}catch{}
     try{const parsed=JSON.parse(settings.bead_subcategories_by_category_json||'{}');if(parsed&&typeof parsed==='object')subcategories.value=parsed}catch{}
     if(!categories.value.some(x=>x.id===activeSubId.value))activeSubId.value=categories.value[0]?.id||''
+    savedCategories.value=cloneCategories(categories.value)
+    savedSubcategories.value=cloneSubcategories(subcategories.value)
   }catch(e){message.error(errorMessage(e))}finally{loading.value=false}
 }
 
@@ -365,14 +421,21 @@ async function save(){
 }
 
 function remove(row:any){Modal.confirm({title:`删除珠材“${row.name}”？`,content:'已使用该珠材的历史设计可能失去完整资料，此操作不可撤销。',okText:'确认删除',cancelText:'取消',okType:'danger',async onOk(){try{await post('/api/bead/delete',{id:row.id});message.success('珠材已删除');await load()}catch(e){message.error(errorMessage(e))}}})}
+function openCategorySettings(){categories.value=cloneCategories(savedCategories.value);subcategories.value=cloneSubcategories(savedSubcategories.value);if(!categories.value.some(item=>item.id===activeSubId.value))activeSubId.value=categories.value[0]?.id||'';categoryOpen.value=true}
+function resetCategoryDrafts(){categories.value=cloneCategories(savedCategories.value);subcategories.value=cloneSubcategories(savedSubcategories.value);draggingCategory.value=null;draggingSub.value=null}
+function reorder<T>(list:T[],from:number,to:number){if(from===to||from<0||to<0||from>=list.length||to>=list.length)return;const [item]=list.splice(from,1);if(item!==undefined)list.splice(to,0,item)}
+function startCategoryDrag(index:number,event:DragEvent){draggingCategory.value=index;if(event.dataTransfer)event.dataTransfer.effectAllowed='move'}
+function dropCategory(index:number){if(draggingCategory.value===null)return;reorder(categories.value,draggingCategory.value,index);draggingCategory.value=null}
+function startSubDrag(index:number,event:DragEvent){draggingSub.value=index;if(event.dataTransfer)event.dataTransfer.effectAllowed='move'}
+function dropSub(index:number){if(draggingSub.value===null)return;reorder(currentConfigSubs.value,draggingSub.value,index);draggingSub.value=null}
 function moveCategory(index:number,offset:number){const target=index+offset;if(target<0||target>=categories.value.length)return;[categories.value[index],categories.value[target]]=[categories.value[target]!,categories.value[index]!]}
 function addCategory(){categories.value.push({id:`category_${Date.now()}`,label:'新分类'})}
 function deleteCategory(index:number){const cat=categories.value[index]!;const used=countByCategory(cat.label);Modal.confirm({title:`删除分类“${cat.label}”？`,content:used?`仍有 ${used} 个珠材使用该分类，请先迁移数据。`:'该分类的子分类配置也会保留，便于误删后恢复。',okType:'danger',onOk(){categories.value.splice(index,1)}})}
-async function saveCategories(){const labels=categories.value.map(x=>x.label.trim());if(labels.some(x=>!x)||new Set(labels).size!==labels.length)return message.warning('分类名称不能为空且不能重复');savingConfig.value=true;try{await post('/api/admin/settings_update',{bead_main_categories_json:JSON.stringify(categories.value),bead_category_order:labels.join(',')});message.success('主分类配置已保存')}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
+async function saveCategories(){const labels=categories.value.map(x=>x.label.trim()),ids=categories.value.map(x=>x.id.trim());if(labels.some(x=>!x)||new Set(labels).size!==labels.length)return message.warning('分类名称不能为空且不能重复');if(ids.some(x=>!x)||new Set(ids).size!==ids.length)return message.warning('分类编码不能为空且不能重复');savingConfig.value=true;try{for(const category of categories.value){const previous=savedCategories.value.find(item=>item.id===category.id);if(previous&&previous.label!==category.label){await post('/api/admin/bead_category_rename',{old_label:previous.label,new_label:category.label,field:'category'})}}await post('/api/admin/settings_update',{bead_main_categories_json:JSON.stringify(categories.value),bead_category_order:labels.join(',')});savedCategories.value=cloneCategories(categories.value);categoryOpen.value=false;message.success('主分类名称和排序已同步');await load()}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
 function moveSub(index:number,offset:number){const list=currentConfigSubs.value,target=index+offset;if(target<0||target>=list.length)return;[list[index],list[target]]=[list[target]!,list[index]!]}
 function addSub(){currentConfigSubs.value.push({id:`option_${Date.now()}`,label:'新选项'})}
 function deleteSub(index:number){currentConfigSubs.value.splice(index,1)}
-async function saveSubcategories(){const list=currentConfigSubs.value;if(list.some(x=>!x.id.trim()||!x.label.trim()))return message.warning('名称和编码不能为空');if(new Set(list.map(x=>x.id)).size!==list.length)return message.warning('编码不能重复');savingConfig.value=true;try{await post('/api/admin/settings_update',{bead_subcategories_by_category_json:JSON.stringify(subcategories.value),bead_category_subcategories_json:JSON.stringify(subcategories.value)});message.success('子分类配置已保存')}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
+async function saveSubcategories(){const allOptions=Object.values(subcategories.value).flat();if(allOptions.some(x=>!x.id.trim()||!x.label.trim()))return message.warning('名称和编码不能为空');for(const list of Object.values(subcategories.value)){if(new Set(list.map(x=>x.id)).size!==list.length)return message.warning('同一分类下编码不能重复')}savingConfig.value=true;try{for(const category of categories.value){const previousOptions=savedSubcategories.value[category.id]||[];for(const option of subcategories.value[category.id]||[]){const previous=previousOptions.find(item=>item.id===option.id);if(previous&&previous.label!==option.label){await post('/api/admin/bead_category_rename',{old_label:previous.label,new_label:option.label,field:category.id==='peishi'?'subcategory':'color_family',scope_category:category.label})}}}await post('/api/admin/settings_update',{bead_subcategories_by_category_json:JSON.stringify(subcategories.value),bead_category_subcategories_json:JSON.stringify(subcategories.value)});savedSubcategories.value=cloneSubcategories(subcategories.value);message.success('子分类名称和排序已同步')}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
 
 onMounted(load)
 </script>
@@ -383,7 +446,7 @@ onMounted(load)
 .catalog-table-card{overflow:hidden;border-radius:16px!important}.catalog-table-card :deep(.ant-card-body){padding:0}.catalog-table-card :deep(.ant-table-thead>tr>th){padding:14px 16px;color:#6b7d76;background:#f8faf9;font-size:12px;font-weight:650}.catalog-table-card :deep(.ant-table-tbody>tr>td){padding:14px 16px;border-bottom-color:#edf1ef}.catalog-table-card :deep(.ant-table-tbody>tr:hover>td){background:#f8fbfa!important}.catalog-table-card :deep(.ant-table-tbody>tr.data-issue-row>td:first-child){box-shadow:inset 3px 0 #d99b56}.catalog-table-card :deep(.ant-pagination){margin:18px 20px}
 .material-cell{display:flex;align-items:center;gap:12px}.material-thumb-wrap{position:relative;flex:0 0 54px}.bead-image,:deep(.bead-image img){border:1px solid #e7ecea;border-radius:14px;object-fit:contain;background:#f5f7f6}.empty-thumb{display:grid;place-items:center;width:54px;height:54px;border:1px dashed #d7e0dc;border-radius:14px;color:#a5b0ac;background:#f5f7f6;font-size:18px}.issue-dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border:2px solid #fff;border-radius:50%;background:#dd9650}.material-copy{min-width:0}.material-name{overflow:hidden;color:#263f37;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.material-en{overflow:hidden;margin-top:3px;color:#87948f;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.material-id{margin-top:4px;color:#adb6b2;font-family:Consolas,monospace;font-size:10px}.category-cell{display:flex;align-items:flex-start;flex-direction:column;gap:6px}.category-cell span{color:#7e8d87;font-size:11px}.commerce-cell{display:flex;flex-direction:column;gap:5px}.commerce-cell>div{display:flex;align-items:center;gap:7px}.commerce-cell>div span{color:#83918c;font-size:11px}.commerce-cell strong{color:#a86e29;font-size:14px}.commerce-cell small{color:#a2aca8}.config-cell{display:flex;flex-direction:column;gap:7px}.config-tags{display:flex;gap:4px}.config-cell>div:not(.config-tags){display:flex;justify-content:space-between;gap:10px;font-size:11px}.config-cell>div span{color:#98a49f}.config-cell>div b{color:#53665f;font-weight:550;text-align:right}.render-cell{display:flex;flex-direction:column;gap:8px}.render-image-status{display:flex;align-items:center;gap:8px}.canvas-image,:deep(.canvas-image img){border-radius:9px;object-fit:contain;background:#f4f6f5}.fallback-canvas{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:#8ea09a;background:#eef3f1}.render-image-status>div{display:flex;min-width:0;flex-direction:column}.render-image-status b{color:#4c6159;font-size:11px}.render-image-status small{margin-top:2px;color:#a0aaa6;font-size:9px}.render-meta{display:flex;gap:6px}.render-meta span{padding:3px 6px;border-radius:6px;color:#75857f;background:#f3f6f5;font-size:9px}.row-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}.edit-button{color:#246b57}
 .editor-hero{display:flex;align-items:center;gap:14px;margin:-8px 0 6px;padding:14px;border:1px solid #e4ece8;border-radius:14px;background:linear-gradient(135deg,#f7faf9,#eef5f2)}.editor-image,:deep(.editor-image img){flex:0 0 72px;border:1px solid #dfe8e4;border-radius:16px;object-fit:contain;background:#fff}.editor-image.empty{display:grid;place-items:center;color:#9caaa5;font-size:22px}.editor-identity{display:flex;min-width:0;flex:1;flex-direction:column}.editor-identity small{color:#94a19c;font-size:10px}.editor-identity b{overflow:hidden;margin:3px 0;color:#21473c;font-size:18px;text-overflow:ellipsis;white-space:nowrap}.editor-identity span{color:#72847d;font-size:12px}.editor-badges{display:flex;align-items:flex-end;flex-direction:column;gap:5px}.editor-tabs :deep(.ant-tabs-nav){margin-bottom:16px}.editor-tabs :deep(.ant-tabs-tab){padding:13px 4px}.editor-section{margin-bottom:14px;padding:16px;border:1px solid #e6ece9;border-radius:14px;background:#fff}.section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.section-heading>div{display:flex;flex-direction:column}.section-heading b{color:#294b40;font-size:14px}.section-heading span{margin-top:3px;color:#94a09b;font-size:11px}.editor-section :deep(.ant-form-item:last-child){margin-bottom:0}.media-explainer{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:11px 12px;border-radius:10px;color:#497063;background:#eef5f2}.media-explainer>span{display:flex;flex-direction:column}.media-explainer b{font-size:12px}.media-explainer small{margin-top:2px;color:#71877f;font-size:11px;line-height:1.5}.image-actions{display:flex;justify-content:flex-end;margin-top:5px}.render-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.render-summary>div{display:flex;flex-direction:column;padding:13px;border-radius:12px;background:#eef5f2}.render-summary small{color:#7c8d86;font-size:10px}.render-summary b{margin:3px 0;color:#245747;font-size:18px}.render-summary span{color:#98a49f;font-size:9px}.field-help{margin-top:6px;color:#89958f;font-size:11px;line-height:1.55}.switch-row{display:flex;align-items:center;gap:10px;height:32px}.switch-row span{color:#7f8f89;font-size:11px}.drawer-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}.drawer-footer>span{color:#919e99;font-size:11px}.drawer-footer>div{display:flex;gap:8px}
-.config-intro{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;border-radius:11px;color:#3e695d;background:#edf5f2}.config-intro>span{display:flex;flex-direction:column}.config-intro b{font-size:12px}.config-intro small{margin-top:2px;color:#7f918a;font-size:10px}.category-editor{display:flex;flex-direction:column;gap:9px;max-height:430px;overflow:auto}.category-row{display:grid;grid-template-columns:24px 1.2fr 1fr 34px 34px 34px;align-items:center;gap:8px}.drag{color:#9ba7a2}.config-actions{display:flex;justify-content:space-between;margin-top:18px}.sub-editor{margin-top:18px}
+.config-intro{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;border-radius:11px;color:#3e695d;background:#edf5f2}.config-intro>span{display:flex;flex-direction:column}.config-intro b{font-size:12px}.config-intro small{margin-top:2px;color:#7f918a;font-size:10px}.config-column-head{display:grid;grid-template-columns:56px 1.2fr 1fr 118px;gap:8px;padding:0 8px 7px;color:#9aa6a1;font-size:9px}.config-column-head span:last-child{text-align:center}.category-editor{display:flex;flex-direction:column;gap:8px;max-height:430px;padding:2px;overflow:auto}.category-row{display:grid;grid-template-columns:48px 1.2fr 1fr 34px 34px 34px;align-items:center;gap:8px;padding:8px;border:1px solid #e8eeeb;border-radius:11px;background:#fff;transition:.15s ease}.category-row:hover{border-color:#c9ddd6;background:#fbfdfc}.category-row.dragging{opacity:.48;border-color:#7aa898}.category-row>:deep(.ant-btn){display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;padding:0;line-height:1}.category-row>:deep(.ant-btn .anticon){display:inline-flex;align-items:center;justify-content:center;margin:0;line-height:1}.sort-handle{display:flex;align-items:center;justify-content:center;gap:5px;color:#9ba7a2;cursor:grab}.sort-handle b{color:#53736a;font:10px Consolas,monospace}.config-field{display:flex;min-width:0;flex-direction:column}.config-field small{margin-top:3px;color:#9aa6a1;font-size:9px}.config-actions{display:flex;justify-content:space-between;margin-top:18px}.subcategory-tip{display:flex;align-items:baseline;gap:8px;margin:14px 2px 9px}.subcategory-tip b{color:#35594e;font-size:11px}.subcategory-tip span{color:#96a29d;font-size:9px}.sub-editor{margin-top:0}
 @media(max-width:1180px){.catalog-stats{grid-template-columns:repeat(3,1fr)}.catalog-stats button:nth-child(4),.catalog-stats button:nth-child(5){display:none}.filter-main{flex-wrap:wrap}.keyword-input{flex:1 1 260px}.filter-select{flex:1 1 140px}}
 @media(max-width:760px){.catalog-stats{grid-template-columns:repeat(2,1fr)}.catalog-stats button:nth-child(3){display:none}.filter-main{align-items:stretch;flex-direction:column}.keyword-input,.filter-select{width:100%}.render-summary{grid-template-columns:1fr}.editor-hero{align-items:flex-start}.editor-badges{display:none}.drawer-footer>span{display:none}.drawer-footer{justify-content:flex-end}.category-row{grid-template-columns:20px 1fr 1fr 32px}.category-row button:nth-last-child(2),.category-row button:nth-last-child(3){display:none}}
 </style>
