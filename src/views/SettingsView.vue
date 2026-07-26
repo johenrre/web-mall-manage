@@ -83,9 +83,9 @@
               <div class="section-toolbar">
                 <div>
                   <h3 class="setting-section-title">首页轮播图</h3>
-                  <p>按表格顺序展示；配置图片、标题和说明，按钮行为由小程序固定。</p>
+                  <p>最多 5 张；配置图片、短标签、标题和说明，“开始定制”按钮由小程序固定。</p>
                 </div>
-                <a-button type="primary" ghost @click="addSlide"><PlusOutlined /> 添加轮播</a-button>
+                <a-button type="primary" ghost :disabled="slides.length >= 5" @click="addSlide"><PlusOutlined /> 添加轮播</a-button>
               </div>
 
               <a-table
@@ -93,7 +93,7 @@
                 :columns="slideColumns"
                 :data-source="slides"
                 :pagination="false"
-                :scroll="{ x: 820 }"
+                :scroll="{ x: 1160 }"
                 row-key="rowKey"
                 size="middle"
               >
@@ -122,11 +122,17 @@
                       </div>
                     </div>
                   </template>
+                  <template v-else-if="column.key === 'eyebrow'">
+                    <a-textarea v-model:value="record.eyebrow" :auto-size="{ minRows: 2, maxRows: 3 }" maxlength="40" placeholder="MORNING NOTE · 今日推荐" />
+                  </template>
                   <template v-else-if="column.key === 'title'">
                     <a-textarea v-model:value="record.title" :auto-size="{ minRows: 2, maxRows: 3 }" placeholder="例如：定义你的专属串珠" />
                   </template>
                   <template v-else-if="column.key === 'description'">
                     <a-textarea v-model:value="record.description" :auto-size="{ minRows: 2, maxRows: 4 }" placeholder="轮播图说明文案" />
+                  </template>
+                  <template v-else-if="column.key === 'enabled'">
+                    <a-switch v-model:checked="record.enabled" checked-children="展示" un-checked-children="停用" />
                   </template>
                   <template v-else-if="column.key === 'actions'">
                     <a-space>
@@ -232,6 +238,7 @@
         </a-tab-pane>
       </a-tabs>
     </a-card>
+
   </div>
 </template>
 
@@ -260,9 +267,12 @@ import { resolveMedia } from '@/utils/format'
 
 interface EditableHomeSlide {
   rowKey: string
+  id: string
   image: string
+  eyebrow: string
   title: string
   description: string
+  enabled: boolean
 }
 
 interface StorageStatus {
@@ -288,8 +298,10 @@ let slideSequence = 0
 
 const slideColumns = [
   { title: '主图', key: 'image', width: 310 },
+  { title: '短标签', key: 'eyebrow', width: 190 },
   { title: '标题', key: 'title', width: 190 },
   { title: '说明', key: 'description', width: 240 },
+  { title: '状态', key: 'enabled', width: 90 },
   { title: '操作', key: 'actions', width: 150, fixed: 'right' },
 ]
 
@@ -355,11 +367,15 @@ function boolValue(value: unknown): boolean {
 
 function createSlide(source: any = {}): EditableHomeSlide {
   slideSequence += 1
+  const id = text(source.id) || `home-slide-${Date.now()}-${slideSequence}`
   return {
-    rowKey: `slide-${slideSequence}`,
+    rowKey: `slide-editor-${slideSequence}`,
+    id,
     image: normalizeSlideImage(source.image || source.imageUrl || source.image_url || source.url),
+    eyebrow: text(source.eyebrow || source.tagline || source.label),
     title: text(source.title),
     description: text(source.description || source.subtitle || source.desc),
+    enabled: source.enabled === undefined ? true : boolValue(source.enabled),
   }
 }
 
@@ -376,9 +392,12 @@ function parseSlides(value: unknown): EditableHomeSlide[] {
 function serializeSlides(): string {
   if (!slides.value.length) return ''
   return JSON.stringify(slides.value.map((slide) => ({
+    id: slide.id,
     image: normalizeSlideImage(slide.image),
+    eyebrow: text(slide.eyebrow),
     title: text(slide.title),
     description: text(slide.description),
+    enabled: slide.enabled,
   })))
 }
 
@@ -414,6 +433,7 @@ async function loadStorageStatus() {
 }
 
 function addSlide() {
+  if (slides.value.length >= 5) return message.warning('首页轮播最多配置 5 张')
   slides.value.push(createSlide())
 }
 
@@ -468,6 +488,7 @@ async function save() {
   if (slides.value.some((slide) => !slide.image)) {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
+  if (slides.value.length > 5) return message.warning('首页轮播最多配置 5 张')
   for (const item of jsonEditors) {
     const value = text(form[item.key])
     if (!value) continue
@@ -491,7 +512,7 @@ async function save() {
   saving.value = true
   try {
     await post('/api/admin/settings_update', payload)
-    message.success('小程序设置已保存并生效')
+    message.success('小程序设置已保存；重新编译或等待缓存刷新后可见')
     await load()
   } catch (error) {
     message.error(errorMessage(error))
@@ -533,7 +554,6 @@ onMounted(() => {
 .slide-image-preview { display: grid; width: 96px; height: 64px; overflow: hidden; flex: 0 0 96px; place-items: center; border: 1px dashed #cbd8d2; border-radius: 9px; color: #93a39c; background: #f5f8f7; font-size: 22px; }
 .slide-image-preview img { width: 100%; height: 100%; object-fit: cover; }
 .slide-image-inputs { display: flex; min-width: 180px; flex: 1; flex-direction: column; align-items: flex-start; gap: 7px; }
-
 @media (max-width: 850px) {
   .settings-tabs { flex-direction: column; }
   .settings-tabs :deep(.ant-tabs-nav) { width: 100%; margin: 0; padding: 8px; border-right: 0; }
