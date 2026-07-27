@@ -1,6 +1,6 @@
 <template>
   <div class="page-shell">
-    <PageHeader title="系统设置" description="配置经营规则、小程序展示、内容资料与微信支付">
+    <PageHeader title="系统设置" description="配置小程序展示、售后服务与微信支付">
       <a-button :loading="loading" @click="load"><ReloadOutlined /> 放弃修改</a-button>
       <a-button type="primary" :loading="saving" @click="save"><SaveOutlined /> 保存全部设置</a-button>
     </PageHeader>
@@ -15,46 +15,6 @@
     <a-skeleton v-if="loading" active :paragraph="{ rows: 14 }" />
     <a-card v-else class="settings-card surface-card" :bordered="false">
       <a-tabs v-model:active-key="tab" tab-position="left" class="settings-tabs">
-        <a-tab-pane key="business">
-          <template #tab><span><FundOutlined /> 经营设置</span></template>
-          <div class="settings-content">
-            <div class="section-intro">
-              <h2>经营与规则</h2>
-              <p>设置分类展示和售后基础规则。</p>
-            </div>
-            <!-- 暂时隐藏推广分佣，后续需要时取消本段注释即可恢复。
-            <section class="setting-section">
-              <h3 class="setting-section-title">推广分佣</h3>
-              <div class="form-grid">
-                <a-form-item label="一级推广分佣比例">
-                  <a-input-number v-model:value="form.commission_rate_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
-                  <div class="field-help">直接下级消费后，上级获得的实付金额比例</div>
-                </a-form-item>
-                <a-form-item label="二级推广分佣比例">
-                  <a-input-number v-model:value="form.commission_rate_level2_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
-                  <div class="field-help">下下级消费后，二级推广人获得的比例</div>
-                </a-form-item>
-              </div>
-            </section>
-            -->
-            <section class="setting-section">
-              <h3 class="setting-section-title">商城规则</h3>
-              <a-form-item label="盘珠分类展示顺序">
-                <a-input v-model:value="form.bead_category_order" placeholder="水晶,沉香,菩提,文玩,配饰" />
-                <div class="field-help">使用英文逗号分隔，只改变显示顺序</div>
-              </a-form-item>
-              <!-- 暂时隐藏积分规则，后续需要时取消本段注释即可恢复。
-              <a-form-item label="积分规则说明">
-                <a-textarea v-model:value="form.points_rule_text" :rows="4" />
-              </a-form-item>
-              -->
-              <a-form-item label="售后退货地址">
-                <a-textarea v-model:value="form.refund_return_address" :rows="4" placeholder="收件人、电话、详细地址和注意事项" />
-              </a-form-item>
-            </section>
-          </div>
-        </a-tab-pane>
-
         <a-tab-pane key="store">
           <template #tab><span><MobileOutlined /> 小程序展示</span></template>
           <div class="settings-content settings-content--wide">
@@ -164,23 +124,6 @@
           </div>
         </a-tab-pane>
 
-        <a-tab-pane key="content">
-          <template #tab><span><ReadOutlined /> 内容资料</span></template>
-          <div class="settings-content">
-            <div class="section-intro">
-              <h2>小程序内容资料</h2>
-              <p>维护关于我们、购买指南、手围测量与珠子尺寸等说明。</p>
-            </div>
-            <JsonEditorCard
-              v-for="item in jsonEditors"
-              :key="item.key"
-              v-model="form[item.key]"
-              :title="item.title"
-              :description="item.description"
-            />
-          </div>
-        </a-tab-pane>
-
         <a-tab-pane key="integrations">
           <template #tab><span><ApiOutlined /> 登录与支付</span></template>
           <div class="settings-content">
@@ -234,6 +177,38 @@
                 </a-form-item>
               </div>
             </section>
+            <section class="setting-section">
+              <h3 class="setting-section-title">售后服务</h3>
+              <a-form-item label="售后退货地址">
+                <a-textarea
+                  v-model:value="form.refund_return_address"
+                  :rows="4"
+                  placeholder="收件人、电话、详细地址和注意事项"
+                />
+                <div class="field-help">用于用户退货时展示收件信息，请填写完整联系人、电话和地址。</div>
+              </a-form-item>
+            </section>
+            <!-- 暂时隐藏推广分佣，后续需要时取消本段注释即可恢复。
+            <section class="setting-section">
+              <h3 class="setting-section-title">推广分佣</h3>
+              <div class="form-grid">
+                <a-form-item label="一级推广分佣比例">
+                  <a-input-number v-model:value="form.commission_rate_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
+                </a-form-item>
+                <a-form-item label="二级推广分佣比例">
+                  <a-input-number v-model:value="form.commission_rate_level2_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
+                </a-form-item>
+              </div>
+            </section>
+            -->
+            <!-- 暂时隐藏积分规则，后续需要时取消本段注释即可恢复。
+            <section class="setting-section">
+              <h3 class="setting-section-title">积分规则</h3>
+              <a-form-item label="积分规则说明">
+                <a-textarea v-model:value="form.points_rule_text" :rows="4" />
+              </a-form-item>
+            </section>
+            -->
           </div>
         </a-tab-pane>
       </a-tabs>
@@ -250,18 +225,15 @@ import {
   ArrowDownOutlined,
   ArrowUpOutlined,
   DeleteOutlined,
-  FundOutlined,
   MobileOutlined,
   PictureOutlined,
   PlusOutlined,
-  ReadOutlined,
   ReloadOutlined,
   SaveOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
-import JsonEditorCard from '@/components/JsonEditorCard.vue'
 import { errorMessage, get, post, uploadImage } from '@/api/http'
 import { resolveMedia } from '@/utils/format'
 
@@ -286,7 +258,7 @@ interface StorageStatus {
   }
 }
 
-const tab = ref('business')
+const tab = ref('store')
 const loading = ref(false)
 const saving = ref(false)
 const uploadingSlideKey = ref('')
@@ -305,17 +277,7 @@ const slideColumns = [
   { title: '操作', key: 'actions', width: 150, fixed: 'right' },
 ]
 
-const jsonEditors = [
-  { key: 'about_us_json', title: '关于我们', description: '品牌名称、标语及中英文品牌介绍。' },
-  { key: 'brand_philosophy_json', title: '品牌理念', description: '图标、名称与中英文说明条目。' },
-  { key: 'guide_4steps_json', title: '四步使用指南', description: '图标、标题与中英文操作说明。' },
-  { key: 'guide_notice_items_json', title: '购买须知条目', description: '购买前需要展示的中英文须知。' },
-  { key: 'wrist_measurement_json', title: '手腕测量步骤', description: '测量步骤、图标、标题与中英文说明。' },
-  { key: 'bead_size_json', title: '珠子尺寸说明', description: '尺寸、标签和中英文详细说明。' },
-]
-
 const stringKeys = [
-  'bead_category_order',
   'points_rule_text',
   'refund_return_address',
   'miniprogram_app_id',
@@ -328,7 +290,6 @@ const stringKeys = [
   'wxpay_mch_serial_no',
   'wxpay_private_key',
   'wxpay_notify_url',
-  ...jsonEditors.map((item) => item.key),
 ]
 const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
 
@@ -489,17 +450,6 @@ async function save() {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
   if (slides.value.length > 5) return message.warning('首页轮播最多配置 5 张')
-  for (const item of jsonEditors) {
-    const value = text(form[item.key])
-    if (!value) continue
-    try {
-      const parsed = JSON.parse(value)
-      if (!parsed || typeof parsed !== 'object') throw new Error('invalid')
-    } catch {
-      return message.error(`“${item.title}”JSON 格式不正确`)
-    }
-  }
-
   const payload: Record<string, unknown> = {
     commission_rate: Number(form.commission_rate_percent) / 100,
     commission_rate_level2: Number(form.commission_rate_level2_percent) / 100,
