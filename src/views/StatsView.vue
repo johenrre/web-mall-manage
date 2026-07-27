@@ -377,12 +377,14 @@ const cards = computed(() => [
   },
 ])
 
-const quickActions = [
+const quickActions = computed(() => [
   { label: '订单管理', description: '处理订单与发货', path: '/orders', icon: ShoppingCartOutlined, primary: true },
   { label: '盘珠管理', description: '维护珠材资料', path: '/beads', icon: SkinOutlined, primary: false },
   { label: '设计审核', description: '查看投稿作品', path: '/designs', icon: PictureOutlined, primary: false },
-  { label: '系统设置', description: '配置小程序展示', path: '/settings', icon: SettingOutlined, primary: false },
-]
+  ...(auth.isSuperAdmin.value
+    ? [{ label: '系统设置', description: '配置小程序展示', path: '/settings', icon: SettingOutlined, primary: false }]
+    : []),
+])
 
 const pendingItems = computed(() => [
   {

@@ -32,7 +32,7 @@
           <a-dropdown placement="bottomRight">
             <button class="user-button">
               <a-avatar :size="36" :src="auth.state.user?.avatar" class="user-avatar">{{ initials }}</a-avatar>
-              <span class="user-meta"><b>{{ auth.state.user?.nickname || auth.state.user?.username }}</b><small>超级管理员</small></span>
+              <span class="user-meta"><b>{{ auth.state.user?.nickname || auth.state.user?.username }}</b><small>{{ roleLabel }}</small></span>
               <DownOutlined />
             </button>
             <template #overlay>
@@ -63,7 +63,7 @@ import {
   AppstoreOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
   DownOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShoppingCartOutlined,
-  SkinOutlined, SolutionOutlined, TeamOutlined, ToolOutlined,
+  SkinOutlined, SolutionOutlined, TeamOutlined, UserSwitchOutlined,
 } from '@ant-design/icons-vue'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 import { get } from '@/api/http'
@@ -80,6 +80,7 @@ const notifications = ref({ paidPendingShipCount: 0, unreadRefundMessageOrders: 
 let timer: number | undefined
 
 const initials = computed(() => (auth.state.user?.nickname || auth.state.user?.username || '管').slice(0, 1).toUpperCase())
+const roleLabel = computed(() => auth.isSuperAdmin.value ? '系统管理员' : '普通账号')
 const selectedKeys = computed(() => [String(route.name || 'stats')])
 const viewKey = computed(() => `${route.fullPath}:${refreshId.value}`)
 
@@ -104,8 +105,17 @@ const menuItems = computed(() => [
   ]},
   { type: 'group', label: collapsed.value ? '' : '商城配置', children: [
     { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
-    { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
+    ...(auth.isSuperAdmin.value ? [
+      { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
+    ] : []),
   ]},
+  ...(auth.isSuperAdmin.value ? [{
+    type: 'group',
+    label: collapsed.value ? '' : '系统管理',
+    children: [
+      { key: 'accounts', icon: () => h(UserSwitchOutlined), label: '账号与权限' },
+    ],
+  }] : []),
 ])
 
 function onMenuClick({ key }: { key: string }) {

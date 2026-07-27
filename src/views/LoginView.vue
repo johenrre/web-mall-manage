@@ -15,10 +15,10 @@
         <div class="mobile-brand"><span>璞</span> 璞光管理后台</div>
         <a-tag color="green" :bordered="false">ADMIN CONSOLE</a-tag>
         <h2>欢迎回来</h2>
-        <p>请使用管理员账号继续</p>
+        <p>请使用后台账号继续</p>
 
         <a-form layout="vertical" :model="form" @finish="submit">
-          <a-form-item label="管理员账号" name="username" :rules="[{ required: true, message: '请输入管理员账号' }]">
+          <a-form-item label="后台账号" name="username" :rules="[{ required: true, message: '请输入后台账号' }]">
             <a-input v-model:value="form.username" size="large" autocomplete="username" placeholder="请输入账号">
               <template #prefix><UserOutlined /></template>
             </a-input>

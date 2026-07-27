@@ -20,7 +20,8 @@ const router = createRouter({
         { path: 'designs', name: 'designs', component: () => import('@/views/DesignsView.vue'), meta: { title: '设计管理' } },
         { path: 'creators', name: 'creators', component: () => import('@/views/CreatorsView.vue'), meta: { title: '设计师管理' } },
         { path: 'checkout-options', name: 'checkout-options', component: () => import('@/views/CheckoutOptionsView.vue'), meta: { title: '结算选项' } },
-        { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '系统设置' } },
+        { path: 'settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '系统设置', adminOnly: true } },
+        { path: 'accounts', name: 'accounts', component: () => import('@/views/AccountsView.vue'), meta: { title: '账号与权限', adminOnly: true } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
@@ -33,6 +34,7 @@ router.beforeEach(async (to) => {
   const auth = useAuth()
   const valid = await auth.bootstrap()
   if (!valid) return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.meta.adminOnly && !auth.isSuperAdmin.value) return { name: 'stats' }
   return true
 })
 

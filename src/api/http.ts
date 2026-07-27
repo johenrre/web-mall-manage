@@ -43,7 +43,7 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status as number | undefined
     const message = error.response?.data?.message || (status === 0 ? '网络连接失败' : error.message) || '请求失败'
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       sessionStorage.removeItem(TOKEN_KEY)
       window.dispatchEvent(new CustomEvent('admin:unauthorized'))
     }

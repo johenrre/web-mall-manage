@@ -5,8 +5,10 @@ export interface AdminUser {
   id: number
   username: string
   nickname?: string
-  role: 'admin' | string
+  role: 'admin' | 'user'
   avatar?: string
+  is_builtin?: boolean
+  permissions?: string[]
 }
 
 interface LoginResult {
@@ -23,7 +25,12 @@ const state = reactive({
 let bootstrapPromise: Promise<boolean> | null = null
 
 export function useAuth() {
-  const isAuthenticated = computed(() => state.user?.role === 'admin')
+  const isAuthenticated = computed(() => state.user?.role === 'admin' || state.user?.role === 'user')
+  const isSuperAdmin = computed(() => state.user?.role === 'admin')
+
+  function can(permission: string) {
+    return state.user?.permissions?.includes(permission) ?? isSuperAdmin.value
+  }
 
   async function login(username: string, password: string) {
     const result = await post<LoginResult>('/api/user/admin_login', { username, password })
@@ -72,5 +79,5 @@ export function useAuth() {
     state.initialized = true
   }
 
-  return { state, isAuthenticated, login, verify, bootstrap, logout, clear }
+  return { state, isAuthenticated, isSuperAdmin, can, login, verify, bootstrap, logout, clear }
 }
