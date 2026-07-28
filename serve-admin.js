@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const PORT = Number(process.env.ADMIN_PORT || 3001)
-const BACKEND_TARGET = process.env.BACKEND_TARGET || 'http://127.0.0.1:5173'
+const BACKEND_TARGET = process.env.BACKEND_TARGET || 'http://127.0.0.1:3000'
 const ROOT = path.resolve(__dirname, 'dist')
 
 const MIME = {
