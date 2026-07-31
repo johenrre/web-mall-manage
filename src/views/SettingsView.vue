@@ -37,6 +37,10 @@
               <a-form-item label="小程序名称">
                 <a-input v-model:value="form.miniprogram_name" placeholder="显示在小程序首页的名称" />
               </a-form-item>
+              <a-form-item label="小程序 Logo / 默认头像">
+                <ImageUploader v-model="form.site_title_logo_image" />
+                <div class="field-help">用于小程序品牌标识；用户没有设置头像时也显示这张图。</div>
+              </a-form-item>
             </section>
 
             <section class="setting-section">
@@ -107,10 +111,49 @@
             </section>
 
             <section class="setting-section">
-              <h3 class="setting-section-title">用户服务与售后</h3>
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">首页主要入口</h3>
+                  <p>固定对应“开始手作”和“制作同款”，这里只更换图片，不改变页面跳转。</p>
+                </div>
+              </div>
+              <div class="asset-grid asset-grid--two">
+                <a-form-item v-for="item in mainEntrySlots" :key="item.key" :label="item.label">
+                  <ImageUploader v-model="item.image" />
+                  <div class="field-help">{{ item.help }}</div>
+                </a-form-item>
+              </div>
+            </section>
+
+            <section class="setting-section">
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">首页快捷入口</h3>
+                  <p>四张图片依次对应灵感图鉴、购物车、我的订单和我的设计。</p>
+                </div>
+              </div>
+              <div class="asset-grid asset-grid--two">
+                <a-form-item v-for="item in shortcutSlots" :key="item.key" :label="item.label">
+                  <ImageUploader v-model="item.image" />
+                  <div class="field-help">建议上传 512 × 512 的 JPG 或 PNG。</div>
+                </a-form-item>
+              </div>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">首页制作流程</h3>
+              <a-form-item label="制作与交付流程长图">
+                <ImageUploader v-model="form.miniprogram_home_process_image" />
+                <div class="field-help">建议上传 900 × 1896 的 JPG；首页显示顶部预览，点击后查看完整长图。</div>
+              </a-form-item>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">品牌与客服</h3>
               <div class="form-grid">
-                <a-form-item class="span-2" label="购买须知">
-                  <a-textarea v-model:value="form.miniprogram_purchase_notice" :rows="4" placeholder="下单前向用户展示的说明" />
+                <a-form-item label="客服悬浮图">
+                  <ImageUploader v-model="form.miniprogram_customer_service_float_image" />
+                  <div class="field-help">建议上传 256 × 256 的透明 PNG，不要带“客服”文字。</div>
                 </a-form-item>
                 <a-form-item label="客服微信号">
                   <a-input v-model:value="contact.wechatId" placeholder="客服微信号" />
@@ -119,6 +162,21 @@
                   <ImageUploader v-model="contact.wechatQr" />
                 </a-form-item>
               </div>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">首页音乐</h3>
+              <a-form-item label="背景音乐音频地址">
+                <a-input v-model:value="form.miniprogram_home_music_url" placeholder="https://img.example.com/audio/home-music.mp3" />
+                <div class="field-help">填写 HTTPS MP3 地址；留空时使用小程序内置音乐。</div>
+              </a-form-item>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">用户服务与售后</h3>
+              <a-form-item label="购买须知">
+                <a-textarea v-model:value="form.miniprogram_purchase_notice" :rows="4" placeholder="下单前向用户展示的说明" />
+              </a-form-item>
             </section>
 
           </div>
@@ -247,6 +305,13 @@ interface EditableHomeSlide {
   enabled: boolean
 }
 
+interface EditableImageSlot {
+  key: string
+  label: string
+  image: string
+  help?: string
+}
+
 interface StorageStatus {
   provider: 'qiniu' | 'local'
   qiniu: {
@@ -266,6 +331,16 @@ const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const contact = reactive({ wechatId: '', wechatQr: '' })
 const slides = ref<EditableHomeSlide[]>([])
+const mainEntrySlots = ref<EditableImageSlot[]>([
+  { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
+  { key: 'finished-style', label: '制作同款', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
+])
+const shortcutSlots = ref<EditableImageSlot[]>([
+  { key: 'inspiration-atlas', label: '灵感图鉴', image: '' },
+  { key: 'cart', label: '购物车', image: '' },
+  { key: 'orders', label: '我的订单', image: '' },
+  { key: 'my-designs', label: '我的设计', image: '' },
+])
 let slideSequence = 0
 
 const slideColumns = [
@@ -284,6 +359,10 @@ const stringKeys = [
   'miniprogram_app_secret',
   'miniprogram_name',
   'miniprogram_purchase_notice',
+  'site_title_logo_image',
+  'miniprogram_home_process_image',
+  'miniprogram_customer_service_float_image',
+  'miniprogram_home_music_url',
   'wxpay_app_id',
   'wxpay_mch_id',
   'wxpay_api_v3_key',
@@ -362,6 +441,30 @@ function serializeSlides(): string {
   })))
 }
 
+function hydrateImageSlots(slots: EditableImageSlot[], value: unknown): void {
+  try {
+    const parsed = JSON.parse(text(value) || '[]')
+    if (!Array.isArray(parsed)) return
+    for (const slot of slots) {
+      const source = parsed.find((item) => {
+        if (!item || typeof item !== 'object') return false
+        const record = item as Record<string, unknown>
+        return text(record.key || record.id) === slot.key
+      }) as Record<string, unknown> | undefined
+      slot.image = source ? normalizeSlideImage(source.image || source.imageUrl || source.image_url || source.url) : ''
+    }
+  } catch {
+    message.error('数据库中的首页图片配置格式错误，请重新配置')
+  }
+}
+
+function serializeImageSlots(slots: EditableImageSlot[]): string {
+  return JSON.stringify(slots.map((slot) => ({
+    key: slot.key,
+    image: normalizeSlideImage(slot.image),
+  })))
+}
+
 async function load() {
   loading.value = true
   try {
@@ -373,6 +476,8 @@ async function load() {
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
     for (const key of boolKeys) form[key] = boolValue(data[key])
     slides.value = parseSlides(data.miniprogram_home_slides_json)
+    hydrateImageSlots(mainEntrySlots.value, data.miniprogram_home_main_entries_json)
+    hydrateImageSlots(shortcutSlots.value, data.miniprogram_home_shortcuts_json)
     try {
       Object.assign(contact, JSON.parse(data.contact_service_json || '{}'))
     } catch {
@@ -450,11 +555,17 @@ async function save() {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
   if (slides.value.length > 5) return message.warning('首页轮播最多配置 5 张')
+  const homeMusicUrl = text(form.miniprogram_home_music_url)
+  if (homeMusicUrl && !/^https:\/\//i.test(homeMusicUrl)) {
+    return message.warning('首页背景音乐必须使用 HTTPS 地址')
+  }
   const payload: Record<string, unknown> = {
     commission_rate: Number(form.commission_rate_percent) / 100,
     commission_rate_level2: Number(form.commission_rate_level2_percent) / 100,
     contact_service_json: JSON.stringify(contact),
     miniprogram_home_slides_json: serializeSlides(),
+    miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
+    miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
   }
   for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
   for (const key of boolKeys) payload[key] = Boolean(form[key])
@@ -496,6 +607,9 @@ onMounted(() => {
 .switch-heading .setting-section-title,
 .section-toolbar .setting-section-title { margin-bottom: 0; }
 .field-help { margin-top: 10px; color: #96a29d; font-size: 11px; }
+.asset-grid { display: grid; gap: 18px 24px; }
+.asset-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.asset-grid :deep(.ant-form-item) { min-width: 0; margin-bottom: 0; }
 .secret-area { font-family: 'SFMono-Regular', Consolas, monospace; }
 .slide-table { overflow: hidden; border: 1px solid #e5ece8; border-radius: 12px; }
 .slide-table :deep(.ant-table-thead > tr > th) { color: #49645b; background: #f4f8f6; font-size: 12px; }
@@ -505,6 +619,7 @@ onMounted(() => {
 .slide-image-preview img { width: 100%; height: 100%; object-fit: cover; }
 .slide-image-inputs { display: flex; min-width: 180px; flex: 1; flex-direction: column; align-items: flex-start; gap: 7px; }
 @media (max-width: 850px) {
+  .asset-grid--two { grid-template-columns: 1fr; }
   .settings-tabs { flex-direction: column; }
   .settings-tabs :deep(.ant-tabs-nav) { width: 100%; margin: 0; padding: 8px; border-right: 0; }
   .settings-tabs :deep(.ant-tabs-nav-list) { overflow: auto; }
