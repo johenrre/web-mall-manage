@@ -109,6 +109,21 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
   return normalizeUploadedImage(result)
 }
 
+export async function uploadAudio(file: File): Promise<UploadedImage> {
+  const isMp3 = ['audio/mpeg', 'audio/mp3'].includes(file.type) || /\.mp3$/i.test(file.name)
+  if (!isMp3) throw new ApiError('仅支持 MP3 音频')
+  if (file.size > 10 * 1024 * 1024) throw new ApiError('音频大小不能超过 10 MB')
+  const form = new FormData()
+  form.append('file', file)
+  const result = await request<UploadedImage>({
+    method: 'POST',
+    url: '/api/upload/audio',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return normalizeUploadedImage(result)
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '操作失败，请稍后重试'
 }

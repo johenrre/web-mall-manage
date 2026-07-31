@@ -166,9 +166,9 @@
 
             <section class="setting-section">
               <h3 class="setting-section-title">首页音乐</h3>
-              <a-form-item label="背景音乐音频地址">
-                <a-input v-model:value="form.miniprogram_home_music_url" placeholder="https://img.example.com/audio/home-music.mp3" />
-                <div class="field-help">填写 HTTPS MP3 地址；留空时使用小程序内置音乐。</div>
+              <a-form-item label="背景音乐">
+                <AudioUploader v-model="form.miniprogram_home_music_url" />
+                <div class="field-help">上传成功后自动回填地址；也可手动填写 HTTPS MP3 地址。留空时首页不显示音乐按钮。</div>
               </a-form-item>
             </section>
 
@@ -292,6 +292,7 @@ import {
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import AudioUploader from '@/components/AudioUploader.vue'
 import { errorMessage, get, post, uploadImage } from '@/api/http'
 import { resolveMedia } from '@/utils/format'
 
