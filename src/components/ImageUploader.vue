@@ -33,7 +33,7 @@ async function upload(options: any) {
   try {
     const result = await uploadImage(options.file as File)
     emit('update:modelValue', result.url)
-    message.success(result.source === 'qiniu' ? '已上传到七牛云' : '图片上传成功')
+    message.success(result.source === 'oss' ? '已上传到阿里云 OSS' : '图片上传成功')
     options.onSuccess?.(result)
   } catch (error) {
     message.error(errorMessage(error)); options.onError?.(error as Error)

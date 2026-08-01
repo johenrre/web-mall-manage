@@ -71,7 +71,7 @@ export function post<T>(url: string, data?: unknown) {
 export interface UploadedImage {
   url: string
   path: string
-  source: 'qiniu' | 'local'
+  source: 'oss' | 'local'
   mime: string
   size: number
 }

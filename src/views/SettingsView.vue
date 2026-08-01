@@ -314,13 +314,15 @@ interface EditableImageSlot {
 }
 
 interface StorageStatus {
-  provider: 'qiniu' | 'local'
-  qiniu: {
+  provider: 'oss' | 'local'
+  oss: {
     configured: boolean
     partiallyConfigured: boolean
     missing: string[]
+    region: string
     bucket: string
-    cdnUrl: string
+    publicUrl: string
+    internal: boolean
   }
 }
 
@@ -375,23 +377,23 @@ const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
 
 const storageAlertType = computed(() => {
   if (!storageStatus.value) return 'info'
-  if (storageStatus.value.qiniu.configured) return 'success'
-  return storageStatus.value.qiniu.partiallyConfigured ? 'error' : 'info'
+  if (storageStatus.value.oss.configured) return 'success'
+  return storageStatus.value.oss.partiallyConfigured ? 'error' : 'info'
 })
 
 const storageAlertMessage = computed(() => {
   if (!storageStatus.value) return '正在检查图片存储配置'
-  if (storageStatus.value.qiniu.configured) return '七牛云配置完整'
-  if (storageStatus.value.qiniu.partiallyConfigured) return '七牛云配置不完整'
+  if (storageStatus.value.oss.configured) return '阿里云 OSS 配置完整'
+  if (storageStatus.value.oss.partiallyConfigured) return '阿里云 OSS 配置不完整'
   return '图片上传使用本地开发存储'
 })
 
 const storageAlertDescription = computed(() => {
   const status = storageStatus.value
   if (!status) return '请稍候'
-  if (status.qiniu.configured) return `图片上传将使用七牛云；实际权限会在上传时校验。空间：${status.qiniu.bucket}；访问域名：${status.qiniu.cdnUrl}`
-  if (status.qiniu.partiallyConfigured) return `缺少：${status.qiniu.missing.join('、')}`
-  return '未配置七牛云时才保存到本地；正式环境建议配置七牛云。'
+  if (status.oss.configured) return `图片上传将使用阿里云 OSS；实际权限会在上传时校验。地域：${status.oss.region}；空间：${status.oss.bucket}；访问域名：${status.oss.publicUrl}${status.oss.internal ? '；服务端上传走同地域内网' : ''}`
+  if (status.oss.partiallyConfigured) return `缺少：${status.oss.missing.join('、')}`
+  return '未配置阿里云 OSS 时才保存到本地；正式环境建议配置 OSS。'
 })
 
 function text(value: unknown): string {
@@ -533,7 +535,7 @@ async function uploadSlide(options: any, slide: EditableHomeSlide) {
     const result = await uploadImage(options.file as File)
     slide.image = result.url
     options.onSuccess?.(result)
-    message.success(result.source === 'qiniu' ? '轮播图片已上传到七牛云，请继续填写内容' : '轮播图片已上传到本地，请继续填写内容')
+    message.success(result.source === 'oss' ? '轮播图片已上传到阿里云 OSS，请继续填写内容' : '轮播图片已上传到本地，请继续填写内容')
   } catch (error) {
     message.error(errorMessage(error))
     options.onError?.(error as Error)

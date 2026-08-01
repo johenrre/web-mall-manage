@@ -52,7 +52,7 @@ async function upload(options: any) {
   try {
     const result = await uploadAudio(options.file as File)
     emit('update:modelValue', result.url)
-    message.success(result.source === 'qiniu' ? '音频已上传到七牛云' : '音频上传成功')
+    message.success(result.source === 'oss' ? '音频已上传到阿里云 OSS' : '音频上传成功')
     options.onSuccess?.(result)
   } catch (error) {
     message.error(errorMessage(error))
