@@ -236,7 +236,7 @@
     </a-drawer>
 
     <a-modal v-model:open="categoryOpen" title="盘珠分类设置" :width="820" :footer="null" @cancel="resetCategoryDrafts">
-      <div class="config-intro"><SettingOutlined /><span><b>这里是小程序素材分类的唯一排序来源</b><small>可拖动或使用箭头排序；修改名称会同步更新已有珠材，保存后小程序按此顺序展示。</small></span></div>
+      <div class="config-intro"><SettingOutlined /><span><b>这里是小程序素材分类的唯一排序来源</b><small>修改名称会同步已有素材；仍有素材使用的分类不能删除。</small></span></div>
       <a-tabs v-model:active-key="categoryTab">
         <a-tab-pane key="main" tab="主分类">
           <div class="config-column-head"><span>顺序</span><span>显示名称</span><span>唯一编码</span><span>操作</span></div>
@@ -393,9 +393,9 @@ async function load(){
   loading.value=true
   try{
     beads.value=listFrom(await get('/api/bead/list'))
-    const settings:any=await get('/api/admin/settings_get')
-    try{const parsed=JSON.parse(settings.bead_main_categories_json||'[]');if(Array.isArray(parsed)&&parsed.length)categories.value=parsed}catch{}
-    try{const parsed=JSON.parse(settings.bead_subcategories_by_category_json||'{}');if(parsed&&typeof parsed==='object')subcategories.value=parsed}catch{}
+    const config:any=await get('/api/admin/bead_category_config')
+    if(Array.isArray(config.categories)&&config.categories.length)categories.value=config.categories
+    if(config.subcategories&&typeof config.subcategories==='object')subcategories.value=config.subcategories
     if(!categories.value.some(x=>x.id===activeSubId.value))activeSubId.value=categories.value[0]?.id||''
     savedCategories.value=cloneCategories(categories.value)
     savedSubcategories.value=cloneSubcategories(subcategories.value)
@@ -430,12 +430,12 @@ function startSubDrag(index:number,event:DragEvent){draggingSub.value=index;if(e
 function dropSub(index:number){if(draggingSub.value===null)return;reorder(currentConfigSubs.value,draggingSub.value,index);draggingSub.value=null}
 function moveCategory(index:number,offset:number){const target=index+offset;if(target<0||target>=categories.value.length)return;[categories.value[index],categories.value[target]]=[categories.value[target]!,categories.value[index]!]}
 function addCategory(){categories.value.push({id:`category_${Date.now()}`,label:'新分类'})}
-function deleteCategory(index:number){const cat=categories.value[index]!;const used=countByCategory(cat.label);Modal.confirm({title:`删除分类“${cat.label}”？`,content:used?`仍有 ${used} 个珠材使用该分类，请先迁移数据。`:'该分类的子分类配置也会保留，便于误删后恢复。',okType:'danger',onOk(){categories.value.splice(index,1)}})}
-async function saveCategories(){const labels=categories.value.map(x=>x.label.trim()),ids=categories.value.map(x=>x.id.trim());if(labels.some(x=>!x)||new Set(labels).size!==labels.length)return message.warning('分类名称不能为空且不能重复');if(ids.some(x=>!x)||new Set(ids).size!==ids.length)return message.warning('分类编码不能为空且不能重复');savingConfig.value=true;try{for(const category of categories.value){const previous=savedCategories.value.find(item=>item.id===category.id);if(previous&&previous.label!==category.label){await post('/api/admin/bead_category_rename',{old_label:previous.label,new_label:category.label,field:'category'})}}await post('/api/admin/settings_update',{bead_main_categories_json:JSON.stringify(categories.value)});savedCategories.value=cloneCategories(categories.value);categoryOpen.value=false;message.success('主分类名称和排序已同步');await load()}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
+function deleteCategory(index:number){const cat=categories.value[index]!;const used=countByCategory(cat.label);if(used>0)return message.warning(`分类“${cat.label}”仍有 ${used} 个素材，请先修改或删除这些素材`);Modal.confirm({title:`删除空分类“${cat.label}”？`,content:'该主分类及其下面的空子分类配置会一起删除。',okText:'确认删除',cancelText:'取消',okType:'danger',onOk(){categories.value.splice(index,1);delete subcategories.value[cat.id];if(activeSubId.value===cat.id)activeSubId.value=categories.value[0]?.id||''}})}
+async function saveCategories(){const labels=categories.value.map(x=>x.label.trim()),ids=categories.value.map(x=>x.id.trim());if(labels.some(x=>!x)||new Set(labels).size!==labels.length)return message.warning('分类名称不能为空且不能重复');if(ids.some(x=>!x)||new Set(ids).size!==ids.length)return message.warning('分类编码不能为空且不能重复');savingConfig.value=true;try{await post('/api/admin/bead_main_categories_save',{categories:categories.value});savedCategories.value=cloneCategories(categories.value);categoryOpen.value=false;message.success('主分类名称和排序已同步');await load()}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
 function moveSub(index:number,offset:number){const list=currentConfigSubs.value,target=index+offset;if(target<0||target>=list.length)return;[list[index],list[target]]=[list[target]!,list[index]!]}
 function addSub(){currentConfigSubs.value.push({id:`option_${Date.now()}`,label:'新选项'})}
-function deleteSub(index:number){currentConfigSubs.value.splice(index,1)}
-async function saveSubcategories(){const allOptions=Object.values(subcategories.value).flat();if(allOptions.some(x=>!x.id.trim()||!x.label.trim()))return message.warning('名称和编码不能为空');for(const list of Object.values(subcategories.value)){if(new Set(list.map(x=>x.id)).size!==list.length)return message.warning('同一分类下编码不能重复')}savingConfig.value=true;try{for(const category of categories.value){const previousOptions=savedSubcategories.value[category.id]||[];for(const option of subcategories.value[category.id]||[]){const previous=previousOptions.find(item=>item.id===option.id);if(previous&&previous.label!==option.label){await post('/api/admin/bead_category_rename',{old_label:previous.label,new_label:option.label,field:category.id==='peishi'?'subcategory':'color_family',scope_category:category.label})}}}await post('/api/admin/settings_update',{bead_subcategories_by_category_json:JSON.stringify(subcategories.value),bead_category_subcategories_json:JSON.stringify(subcategories.value)});savedSubcategories.value=cloneSubcategories(subcategories.value);message.success('子分类名称和排序已同步')}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
+function deleteSub(index:number){const sub=currentConfigSubs.value[index]!;const used=countBySubcategory(activeSubId.value,sub.label);if(used>0)return message.warning(`子分类“${sub.label}”仍有 ${used} 个素材，请先修改或删除这些素材`);Modal.confirm({title:`删除空子分类“${sub.label}”？`,content:'删除后需要点击“保存配置”才会生效。',okText:'确认删除',cancelText:'取消',okType:'danger',onOk(){currentConfigSubs.value.splice(index,1)}})}
+async function saveSubcategories(){const allOptions=Object.values(subcategories.value).flat();if(allOptions.some(x=>!x.id.trim()||!x.label.trim()))return message.warning('名称和编码不能为空');for(const list of Object.values(subcategories.value)){if(new Set(list.map(x=>x.id)).size!==list.length)return message.warning('同一分类下编码不能重复');if(new Set(list.map(x=>x.label)).size!==list.length)return message.warning('同一分类下名称不能重复')}savingConfig.value=true;try{await post('/api/admin/bead_subcategories_save',{subcategories:subcategories.value});savedSubcategories.value=cloneSubcategories(subcategories.value);message.success('子分类名称和排序已同步');await load()}catch(e){message.error(errorMessage(e))}finally{savingConfig.value=false}}
 
 onMounted(load)
 </script>
