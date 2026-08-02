@@ -14,6 +14,7 @@ const router = createRouter({
         { path: 'orders', name: 'orders', component: () => import('@/views/OrdersView.vue'), meta: { title: '订单管理' } },
         { path: 'aftersales', name: 'aftersales', component: () => import('@/views/OrdersView.vue'), props: { aftersales: true }, meta: { title: '售后管理' } },
         { path: 'beads', name: 'beads', component: () => import('@/views/BeadsView.vue'), meta: { title: '盘珠管理' } },
+        { path: 'products', name: 'products', component: () => import('@/views/ProductsView.vue'), meta: { title: '商品管理' } },
         { path: 'withdraws', name: 'withdraws', component: () => import('@/views/WithdrawsView.vue'), meta: { title: '提现管理' } },
         { path: 'coupons', name: 'coupons', component: () => import('@/views/CouponsView.vue'), meta: { title: '现金卡券' } },
         { path: 'users', name: 'users', component: () => import('@/views/UsersView.vue'), meta: { title: '用户管理' } },

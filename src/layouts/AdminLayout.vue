@@ -62,7 +62,7 @@ import { Modal } from 'ant-design-vue'
 import {
   AppstoreOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
   DownOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShoppingCartOutlined,
+  PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShopOutlined, ShoppingCartOutlined,
   SkinOutlined, SolutionOutlined, TeamOutlined, UserSwitchOutlined,
 } from '@ant-design/icons-vue'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
@@ -99,6 +99,7 @@ const menuItems = computed(() => [
     { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' },
   ]},
   { type: 'group', label: collapsed.value ? '' : '商品与内容', children: [
+    { key: 'products', icon: () => h(ShopOutlined), label: '商品管理' },
     { key: 'beads', icon: () => h(AppstoreOutlined), label: '盘珠管理' },
     { key: 'designs', icon: () => h(PictureOutlined), label: '设计管理' },
     { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' },
