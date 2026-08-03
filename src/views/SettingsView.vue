@@ -210,7 +210,7 @@
               <div class="switch-heading">
                 <div>
                   <h3 class="setting-section-title">微信支付（小程序）</h3>
-                  <p>需要微信支付商户号、API v3 密钥、证书序列号和商户 API 私钥。</p>
+                  <p>需要微信支付商户号、API v3 密钥、商户 API 证书和微信支付公钥。</p>
                 </div>
                 <a-switch v-model:checked="form.wxpay_enabled" checked-children="启用" un-checked-children="停用" />
               </div>
@@ -227,11 +227,18 @@
                 <a-form-item label="商户证书序列号">
                   <a-input v-model:value="form.wxpay_mch_serial_no" name="wxpay-cert-serial" autocomplete="off" />
                 </a-form-item>
+                <a-form-item label="微信支付公钥 ID">
+                  <a-input v-model:value="form.wxpay_public_key_id" name="wxpay-public-key-id" autocomplete="off" placeholder="PUB_KEY_ID_ 开头" />
+                </a-form-item>
                 <a-form-item class="span-2" label="支付回调地址">
                   <a-input v-model:value="form.wxpay_notify_url" placeholder="https://域名/api/pay/notify_wxpay" />
                 </a-form-item>
                 <a-form-item class="span-2" label="商户 API 私钥">
                   <a-textarea v-model:value="form.wxpay_private_key" name="wxpay-private-key" autocomplete="off" :rows="6" class="secret-area" />
+                </a-form-item>
+                <a-form-item class="span-2" label="微信支付公钥">
+                  <a-textarea v-model:value="form.wxpay_public_key" name="wxpay-public-key" autocomplete="off" :rows="5" class="secret-area" placeholder="-----BEGIN PUBLIC KEY-----" />
+                  <div class="field-help">在微信支付商户平台“账户中心 → API安全 → 微信支付公钥”下载。</div>
                 </a-form-item>
               </div>
             </section>
@@ -371,6 +378,8 @@ const stringKeys = [
   'wxpay_api_v3_key',
   'wxpay_mch_serial_no',
   'wxpay_private_key',
+  'wxpay_public_key_id',
+  'wxpay_public_key',
   'wxpay_notify_url',
 ]
 const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
