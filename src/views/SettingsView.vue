@@ -20,7 +20,7 @@
           <div class="settings-content settings-content--wide">
             <div class="section-intro">
               <h2>小程序展示</h2>
-              <p>管理小程序名称、首页轮播和用户可见信息。</p>
+              <p>分区管理通用展示、首页内容与 DIY 页面资源。</p>
             </div>
 
             <a-alert
@@ -32,8 +32,16 @@
               <template #action><a-button size="small" @click="loadStorageStatus">刷新</a-button></template>
             </a-alert>
 
+            <div class="setting-area-heading setting-area-heading--first">
+              <div>
+                <span>COMMON</span>
+                <h3>通用展示</h3>
+              </div>
+              <p>用于多个小程序页面共同展示的品牌与客服资料。</p>
+            </div>
+
             <section class="setting-section">
-              <h3 class="setting-section-title">基础展示</h3>
+              <h3 class="setting-section-title">品牌资料</h3>
               <a-form-item label="小程序名称">
                 <a-input v-model:value="form.miniprogram_name" placeholder="显示在小程序首页的名称" />
               </a-form-item>
@@ -42,6 +50,30 @@
                 <div class="field-help">用于小程序品牌标识；用户没有设置头像时也显示这张图。</div>
               </a-form-item>
             </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">品牌与客服</h3>
+              <div class="form-grid">
+                <a-form-item label="客服悬浮图">
+                  <ImageUploader v-model="form.miniprogram_customer_service_float_image" />
+                  <div class="field-help">建议上传 256 × 256 的透明 PNG，不要带“客服”文字。</div>
+                </a-form-item>
+                <a-form-item label="客服微信号">
+                  <a-input v-model:value="contact.wechatId" placeholder="客服微信号" />
+                </a-form-item>
+                <a-form-item label="客服微信二维码">
+                  <ImageUploader v-model="contact.wechatQr" />
+                </a-form-item>
+              </div>
+            </section>
+
+            <div class="setting-area-heading">
+              <div>
+                <span>HOME</span>
+                <h3>首页部分</h3>
+              </div>
+              <p>配置首页首屏、入口、流程图片与全局背景音乐。</p>
+            </div>
 
             <section class="setting-section">
               <div class="section-toolbar">
@@ -149,27 +181,77 @@
             </section>
 
             <section class="setting-section">
-              <h3 class="setting-section-title">品牌与客服</h3>
-              <div class="form-grid">
-                <a-form-item label="客服悬浮图">
-                  <ImageUploader v-model="form.miniprogram_customer_service_float_image" />
-                  <div class="field-help">建议上传 256 × 256 的透明 PNG，不要带“客服”文字。</div>
-                </a-form-item>
-                <a-form-item label="客服微信号">
-                  <a-input v-model:value="contact.wechatId" placeholder="客服微信号" />
-                </a-form-item>
-                <a-form-item label="客服微信二维码">
-                  <ImageUploader v-model="contact.wechatQr" />
-                </a-form-item>
-              </div>
-            </section>
-
-            <section class="setting-section">
               <h3 class="setting-section-title">首页音乐</h3>
               <a-form-item label="背景音乐">
                 <AudioUploader v-model="form.miniprogram_home_music_url" />
                 <div class="field-help">上传成功后自动回填地址；也可手动填写 HTTPS MP3 地址。留空时首页不显示音乐按钮。</div>
               </a-form-item>
+            </section>
+
+            <div class="setting-area-heading">
+              <div>
+                <span>DIY STUDIO</span>
+                <h3>DIY 页面部分</h3>
+              </div>
+              <p>配置 DIY 编辑器的珠盘背景，发现页会复用排在第一位的珠盘。</p>
+            </div>
+
+            <section class="setting-section">
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">珠盘背景图</h3>
+                  <p>最多 5 张，DIY 页面按当前顺序切换；第一张同时作为发现页设计卡片的盘子图。</p>
+                </div>
+                <a-button type="primary" ghost :disabled="trayImages.length >= 5" @click="addTrayImage"><PlusOutlined /> 添加珠盘</a-button>
+              </div>
+
+              <a-table
+                class="slide-table tray-table"
+                :columns="trayColumns"
+                :data-source="trayImages"
+                :pagination="false"
+                row-key="rowKey"
+                size="middle"
+              >
+                <template #emptyText>
+                  <a-empty description="尚未配置，将继续使用小程序内置珠盘图" />
+                </template>
+                <template #bodyCell="{ column, record, index }">
+                  <template v-if="column.key === 'order'">
+                    <div class="tray-order-cell">
+                      <strong>{{ index + 1 }}</strong>
+                      <a-tag v-if="index === 0" color="green">发现页底图</a-tag>
+                    </div>
+                  </template>
+                  <template v-else-if="column.key === 'image'">
+                    <div class="slide-image-cell">
+                      <div class="slide-image-preview slide-image-preview--tray">
+                        <img v-if="record.image" :src="resolveMedia(record.image)" alt="珠盘图预览" />
+                        <PictureOutlined v-else />
+                      </div>
+                      <div class="slide-image-inputs">
+                        <a-input v-model:value="record.image" placeholder="图片地址或上传图片" @blur="record.image = normalizeSlideImage(record.image)" />
+                        <a-upload
+                          :show-upload-list="false"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          :before-upload="validateSlideFile"
+                          :custom-request="(options: any) => uploadTrayImage(options, record)"
+                        >
+                          <a-button size="small" :loading="uploadingTrayKey === record.rowKey"><UploadOutlined /> 上传图片</a-button>
+                        </a-upload>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <a-space>
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveTrayImage(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === trayImages.length - 1" title="下移" @click="moveTrayImage(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger title="删除" @click="removeTrayImage(record.rowKey)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </template>
+                </template>
+              </a-table>
+              <div class="field-help">建议上传正方形 JPG 或 PNG，主体居中且四周留白；列表为空时小程序自动使用内置珠盘图。</div>
             </section>
 
           </div>
@@ -338,6 +420,12 @@ interface EditableImageSlot {
   help?: string
 }
 
+interface EditableTrayImage {
+  rowKey: string
+  id: string
+  image: string
+}
+
 interface StorageStatus {
   provider: 'oss' | 'local'
   oss: {
@@ -355,10 +443,12 @@ const tab = ref('store')
 const loading = ref(false)
 const saving = ref(false)
 const uploadingSlideKey = ref('')
+const uploadingTrayKey = ref('')
 const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const contact = reactive({ wechatId: '', wechatQr: '' })
 const slides = ref<EditableHomeSlide[]>([])
+const trayImages = ref<EditableTrayImage[]>([])
 const refundReasons = ref<string[]>([])
 const mainEntrySlots = ref<EditableImageSlot[]>([
   { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
@@ -371,6 +461,7 @@ const shortcutSlots = ref<EditableImageSlot[]>([
   { key: 'my-designs', label: '我的设计', image: '' },
 ])
 let slideSequence = 0
+let trayImageSequence = 0
 
 const slideColumns = [
   { title: '主图', key: 'image', width: 310 },
@@ -379,6 +470,12 @@ const slideColumns = [
   { title: '说明', key: 'description', width: 240 },
   { title: '状态', key: 'enabled', width: 90 },
   { title: '操作', key: 'actions', width: 150, fixed: 'right' },
+]
+
+const trayColumns = [
+  { title: '顺序与用途', key: 'order', width: 150 },
+  { title: '珠盘图片', key: 'image' },
+  { title: '操作', key: 'actions', width: 150 },
 ]
 
 const stringKeys = [
@@ -473,6 +570,37 @@ function serializeSlides(): string {
   })))
 }
 
+function createTrayImage(source: any = {}): EditableTrayImage {
+  trayImageSequence += 1
+  return {
+    rowKey: `tray-image-editor-${trayImageSequence}`,
+    id: text(source.id) || `diy-tray-${Date.now()}-${trayImageSequence}`,
+    image: normalizeSlideImage(
+      typeof source === 'string'
+        ? source
+        : source.image || source.imageUrl || source.image_url || source.url,
+    ),
+  }
+}
+
+function parseTrayImages(value: unknown): EditableTrayImage[] {
+  try {
+    const parsed = JSON.parse(text(value) || '[]')
+    return Array.isArray(parsed) ? parsed.map(createTrayImage).slice(0, 5) : []
+  } catch {
+    message.error('数据库中的 DIY 珠盘图片配置格式错误，请重新配置')
+    return []
+  }
+}
+
+function serializeTrayImages(): string {
+  if (!trayImages.value.length) return ''
+  return JSON.stringify(trayImages.value.map((item) => ({
+    id: item.id,
+    image: normalizeSlideImage(item.image),
+  })))
+}
+
 function hydrateImageSlots(slots: EditableImageSlot[], value: unknown): void {
   try {
     const parsed = JSON.parse(text(value) || '[]')
@@ -505,6 +633,7 @@ async function load() {
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
     for (const key of boolKeys) form[key] = boolValue(data[key])
     slides.value = parseSlides(data.miniprogram_home_slides_json)
+    trayImages.value = parseTrayImages(data.miniprogram_diy_tray_images_json)
     try {
       const parsed = JSON.parse(String(data.miniprogram_refund_reasons_json || '[]'))
       refundReasons.value = Array.isArray(parsed) ? parsed.map((item) => text(item)).filter(Boolean).slice(0, 10) : []
@@ -548,6 +677,22 @@ function moveSlide(index: number, offset: number) {
 
 function removeSlide(rowKey: string) {
   slides.value = slides.value.filter((slide) => slide.rowKey !== rowKey)
+}
+
+function addTrayImage() {
+  if (trayImages.value.length >= 5) return message.warning('DIY 珠盘最多配置 5 张')
+  trayImages.value.push(createTrayImage())
+}
+
+function moveTrayImage(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= trayImages.value.length) return
+  const [item] = trayImages.value.splice(index, 1)
+  if (item) trayImages.value.splice(target, 0, item)
+}
+
+function removeTrayImage(rowKey: string) {
+  trayImages.value = trayImages.value.filter((item) => item.rowKey !== rowKey)
 }
 
 function addRefundReason() {
@@ -594,12 +739,32 @@ async function uploadSlide(options: any, slide: EditableHomeSlide) {
   }
 }
 
+async function uploadTrayImage(options: any, trayImage: EditableTrayImage) {
+  uploadingTrayKey.value = trayImage.rowKey
+  try {
+    const result = await uploadImage(options.file as File)
+    trayImage.image = result.url
+    options.onSuccess?.(result)
+    message.success(result.source === 'oss' ? '珠盘图片已上传到阿里云 OSS' : '珠盘图片已上传到本地')
+  } catch (error) {
+    message.error(errorMessage(error))
+    options.onError?.(error as Error)
+  } finally {
+    uploadingTrayKey.value = ''
+  }
+}
+
 async function save() {
   for (const slide of slides.value) slide.image = normalizeSlideImage(slide.image)
   if (slides.value.some((slide) => !slide.image)) {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
   if (slides.value.length > 5) return message.warning('首页轮播最多配置 5 张')
+  for (const trayImage of trayImages.value) trayImage.image = normalizeSlideImage(trayImage.image)
+  if (trayImages.value.some((trayImage) => !trayImage.image)) {
+    return message.warning('每个 DIY 珠盘都必须填写图片地址或上传图片')
+  }
+  if (trayImages.value.length > 5) return message.warning('DIY 珠盘最多配置 5 张')
   const normalizedRefundReasons = refundReasons.value.map((reason) => text(reason))
   if (normalizedRefundReasons.some((reason) => !reason)) return message.warning('售后原因不能为空')
   if (normalizedRefundReasons.some((reason) => reason.length > 20)) return message.warning('每条售后原因不能超过 20 个字符')
@@ -613,6 +778,7 @@ async function save() {
     miniprogram_home_slides_json: serializeSlides(),
     miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
+    miniprogram_diy_tray_images_json: serializeTrayImages(),
     miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
   }
   for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
@@ -621,7 +787,7 @@ async function save() {
   saving.value = true
   try {
     await post('/api/admin/settings_update', payload)
-    message.success('小程序设置已保存；重新编译或等待缓存刷新后可见')
+    message.success('小程序设置已保存；首页下拉刷新或重新进入小程序后可见')
     await load()
   } catch (error) {
     message.error(errorMessage(error))
@@ -665,7 +831,16 @@ onMounted(() => {
 .slide-image-cell { display: flex; align-items: flex-start; gap: 10px; }
 .slide-image-preview { display: grid; width: 96px; height: 64px; overflow: hidden; flex: 0 0 96px; place-items: center; border: 1px dashed #cbd8d2; border-radius: 9px; color: #93a39c; background: #f5f8f7; font-size: 22px; }
 .slide-image-preview img { width: 100%; height: 100%; object-fit: cover; }
+.slide-image-preview--tray { width: 76px; height: 76px; flex-basis: 76px; border-radius: 50%; }
 .slide-image-inputs { display: flex; min-width: 180px; flex: 1; flex-direction: column; align-items: flex-start; gap: 7px; }
+.setting-area-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 20px 4px 2px; border-top: 1px solid #e5ece8; }
+.setting-area-heading--first { padding-top: 2px; border-top: 0; }
+.setting-area-heading > div { display: flex; align-items: baseline; gap: 12px; }
+.setting-area-heading span { color: #8fa299; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+.setting-area-heading h3 { margin: 0; color: #244a3e; font: 700 20px Georgia, 'Noto Serif SC', serif; }
+.setting-area-heading p { max-width: 520px; margin: 0; color: #8b9893; font-size: 12px; text-align: right; }
+.tray-order-cell { display: flex; min-height: 76px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
+.tray-order-cell strong { color: #31584b; font-size: 18px; }
 .refund-reason-list { display: flex; max-width: 720px; flex-direction: column; gap: 10px; }
 .refund-reason-row { display: grid; grid-template-columns: 28px minmax(220px, 1fr) auto; align-items: center; gap: 10px; }
 .refund-reason-order { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #577067; background: #edf4f1; font-size: 12px; font-weight: 700; }
