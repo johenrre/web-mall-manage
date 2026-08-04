@@ -173,6 +173,14 @@
             </section>
 
             <section class="setting-section">
+              <h3 class="setting-section-title">首页活动专区</h3>
+              <a-form-item label="灵感分享计划背景图">
+                <ImageUploader v-model="form.miniprogram_home_activity_image" />
+                <div class="field-help">首页活动卡片、活动详情页顶部和微信分享封面共用；未配置时不显示图片。</div>
+              </a-form-item>
+            </section>
+
+            <section class="setting-section">
               <h3 class="setting-section-title">首页制作流程</h3>
               <a-form-item label="制作与交付流程长图">
                 <ImageUploader v-model="form.miniprogram_home_process_image" />
@@ -185,6 +193,22 @@
               <a-form-item label="背景音乐">
                 <AudioUploader v-model="form.miniprogram_home_music_url" />
                 <div class="field-help">上传成功后自动回填地址；也可手动填写 HTTPS MP3 地址。留空时首页不显示音乐按钮。</div>
+              </a-form-item>
+            </section>
+
+            <div class="setting-area-heading">
+              <div>
+                <span>MALL</span>
+                <h3>商城页面部分</h3>
+              </div>
+              <p>配置商城浏览页的顶部展示资源。</p>
+            </div>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">商城顶部展示</h3>
+              <a-form-item label="顶部背景图">
+                <ImageUploader v-model="form.miniprogram_mall_hero_image" />
+                <div class="field-help">建议上传约 3:1 的横向 JPG 或 WebP；未配置时不显示图片。</div>
               </a-form-item>
             </section>
 
@@ -252,6 +276,45 @@
                 </template>
               </a-table>
               <div class="field-help">建议上传正方形 JPG 或 PNG，主体居中且四周留白；列表为空时小程序自动使用内置珠盘图。</div>
+            </section>
+
+            <section class="setting-section">
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">分享展示配置</h3>
+                  <p>用于 DIY 页面作品展示状态顶部的品牌图与分享文案。</p>
+                </div>
+              </div>
+              <a-form-item label="顶部品牌图">
+                <ImageUploader v-model="form.miniprogram_diy_showcase_brand_image" />
+                <div class="field-help">建议上传透明底 PNG，横向约 3:1，图片中可同时包含 Logo 和品牌文字；未配置时不显示。</div>
+              </a-form-item>
+              <div class="form-grid">
+                <a-form-item label="短标签">
+                  <a-input
+                    v-model:value="form.miniprogram_diy_showcase_eyebrow"
+                    maxlength="32"
+                    show-count
+                    placeholder="例如：MY CRYSTAL · 今日作品"
+                  />
+                </a-form-item>
+                <a-form-item label="主标题">
+                  <a-input
+                    v-model:value="form.miniprogram_diy_showcase_title"
+                    maxlength="24"
+                    show-count
+                    placeholder="例如：把喜欢的光，串成日常"
+                  />
+                </a-form-item>
+              </div>
+              <a-form-item label="说明文字">
+                <a-input
+                  v-model:value="form.miniprogram_diy_showcase_description"
+                  maxlength="40"
+                  show-count
+                  placeholder="例如：一串一念，留住此刻的温柔。"
+                />
+              </a-form-item>
             </section>
 
           </div>
@@ -487,8 +550,14 @@ const stringKeys = [
   'miniprogram_purchase_notice',
   'site_title_logo_image',
   'miniprogram_home_process_image',
+  'miniprogram_home_activity_image',
   'miniprogram_customer_service_float_image',
   'miniprogram_home_music_url',
+  'miniprogram_mall_hero_image',
+  'miniprogram_diy_showcase_brand_image',
+  'miniprogram_diy_showcase_eyebrow',
+  'miniprogram_diy_showcase_title',
+  'miniprogram_diy_showcase_description',
   'wxpay_app_id',
   'wxpay_mch_id',
   'wxpay_api_v3_key',
