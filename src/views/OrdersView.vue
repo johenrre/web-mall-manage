@@ -2,6 +2,7 @@
   <div class="page-shell">
     <PageHeader :title="aftersales ? '售后管理' : '订单管理'" :description="aftersales ? '集中审核售后申请并处理退货退款' : '查看订单备料清单，完成制作、发货与履约'">
       <a-input-search v-model:value="keyword" allow-clear placeholder="订单号 / 用户 / 收件人 / 手机号" style="width:300px" @search="search" />
+      <a-button v-if="!aftersales" :loading="syncingReceipts" @click="syncReceiptStatuses"><SyncOutlined /> 同步微信收货状态</a-button>
       <a-button v-if="!aftersales" danger :loading="cleaning" @click="cleanup"><ClearOutlined /> 关闭超时未付款订单</a-button>
       <a-button :loading="loading" @click="load"><ReloadOutlined /> 刷新</a-button>
     </PageHeader>
@@ -113,6 +114,7 @@
           <a-descriptions-item label="快递公司">{{ selected.express_company||'—' }}</a-descriptions-item>
           <a-descriptions-item label="快递单号"><span class="mono">{{ selected.express_no||'—' }}</span></a-descriptions-item>
           <a-descriptions-item label="发货时间">{{ dateTime(selected.ship_time) }}</a-descriptions-item>
+          <a-descriptions-item v-if="selected.status==='completed'" label="完成同步时间">{{ dateTime(selected.receive_time) }}</a-descriptions-item>
           <a-descriptions-item label="微信发货同步">
             <a-tag :color="shippingSyncColor(selected.wechat_shipping_status)">{{ shippingSyncText(selected.wechat_shipping_status) }}</a-tag>
             <a-button v-if="selected.wechat_shipping_status==='failed'||selected.wechat_shipping_status==='skipped'" type="link" size="small" :loading="syncingShipping" @click="retryShippingSync">重新同步</a-button>
@@ -159,7 +161,7 @@
 <script setup lang="ts">
 import { computed,onMounted,reactive,ref,watch } from 'vue'
 import { message,Modal } from 'ant-design-vue'
-import { ClearOutlined,CopyOutlined,MoreOutlined,ReloadOutlined,RightOutlined } from '@ant-design/icons-vue'
+import { ClearOutlined,CopyOutlined,MoreOutlined,ReloadOutlined,RightOutlined,SyncOutlined } from '@ant-design/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import BraceletPreview from '@/components/BraceletPreview.vue'
@@ -173,7 +175,7 @@ const filters=[{label:'全部订单',value:'',dot:'#779087'},{label:'待付款',
 const refundMap:any={pending:{text:'待商家审核',color:'gold'},approved:{text:'待寄回商品',color:'blue'},returning:{text:'待商家收货',color:'cyan'},rejected:{text:'已拒绝',color:'red'},processing:{text:'退款处理中',color:'processing'},success:{text:'已退款',color:'green'},closed:{text:'退款关闭',color:'default'},abnormal:{text:'退款异常',color:'red'},cancelled:{text:'已撤回',color:'default'}}
 const expressCompanies=[{code:'SF',name:'顺丰速运'},{code:'YD',name:'韵达快递'},{code:'ZTO',name:'中通快递'},{code:'YTO',name:'圆通速递'},{code:'STO',name:'申通快递'},{code:'JD',name:'京东物流'},{code:'EMS',name:'邮政 EMS'},{code:'JTSD',name:'极兔速递'}]
 const expressOptions=expressCompanies.map(item=>({label:item.name,value:item.code}))
-const loading=ref(false),saving=ref(false),cleaning=ref(false),queryingRefund=ref(false),syncingShipping=ref(false),orders=ref<any[]>([]),keyword=ref(''),status=ref(props.aftersales?'refund':''),page=ref(1),pageSize=ref(20),total=ref(0),statusCounts=ref<Record<string,number>>({})
+const loading=ref(false),saving=ref(false),cleaning=ref(false),queryingRefund=ref(false),syncingShipping=ref(false),syncingReceipts=ref(false),orders=ref<any[]>([]),keyword=ref(''),status=ref(props.aftersales?'refund':''),page=ref(1),pageSize=ref(20),total=ref(0),statusCounts=ref<Record<string,number>>({})
 const selected=ref<any>(),detailOpen=ref(false),shipOpen=ref(false),reviewOpen=ref(false),beadOpen=ref(false),selectedBead=ref<any>()
 const shipForm=reactive({code:'',no:''}),reviewAction=ref<'approve'|'reject'|'refund'>('approve'),reviewRemark=ref('')
 const selectedMaterials=computed(()=>materialsOf(selected.value))
@@ -225,6 +227,7 @@ async function copyMaterialList(){if(!selected.value)return;const lines=[`订单
 async function changeStatus(row:any,next:string){Modal.confirm({title:`将订单状态改为“${orderStatus[next]?.text}”？`,content:next==='cancelled'?'系统会先查询微信支付状态；未付款才会关单并取消。':'状态变更会同步影响用户端订单流程。',okText:'确认变更',cancelText:'取消',async onOk(){try{if(next==='cancelled')await post('/api/order/cancel',{order_id:row.id});else await post('/api/order/update_status',{id:row.id,status:next});message.success('订单状态已更新');await load()}catch(e){message.error(errorMessage(e))}}})}
 async function ship(){if(!shipForm.code||!shipForm.no.trim())return message.warning('请完整填写快递公司和快递单号');saving.value=true;try{const result:any=await post('/api/order/ship',{order_id:selected.value.id,express_company:expressName(shipForm.code),express_code:shipForm.code,express_no:shipForm.no.trim()});if(result?.wechat_shipping_status==='success')message.success('订单已发货，并已同步微信');else message.warning(`订单已发货；${result?.wechat_shipping_error||'微信发货信息暂未同步'}`);shipOpen.value=false;detailOpen.value=false;await load()}catch(e){message.error(errorMessage(e))}finally{saving.value=false}}
 async function retryShippingSync(){if(!selected.value?.id)return;syncingShipping.value=true;try{const result:any=await post('/api/order/ship_sync',{order_id:selected.value.id});selected.value.wechat_shipping_status=result?.wechat_shipping_status||'success';selected.value.wechat_shipping_synced_at=result?.wechat_shipping_synced_at||'';selected.value.wechat_shipping_error='';message.success('微信发货信息同步成功');await load()}catch(e){message.error(errorMessage(e))}finally{syncingShipping.value=false}}
+function syncReceiptStatuses(){Modal.confirm({title:'同步微信收货状态？',content:'系统会查询全部本地“已发货”订单。只有微信已确认收货、交易完成或进入结算的订单，才会更新为“已完成”。',okText:'开始同步',cancelText:'取消',async onOk(){syncingReceipts.value=true;try{const result:any=await post('/api/order/receive_sync');const summary=`共检查 ${result?.checked_count||0} 笔：更新完成 ${result?.completed_count||0} 笔、仍待收货 ${result?.waiting_count||0} 笔、跳过 ${result?.skipped_count||0} 笔、失败 ${result?.failed_count||0} 笔`;if(result?.failed_count)message.warning(summary,6);else message.success(summary,6);await load()}catch(e){message.error(errorMessage(e))}finally{syncingReceipts.value=false}}})}
 function remove(row:any){Modal.confirm({title:`删除订单 ${row.order_no}？`,content:row.status==='pending'?'系统会先确认未付款并关闭微信订单，再从订单列表删除；支付流水仍保留。':'订单将从管理列表移除，支付流水仍会保留。',okText:'确认删除',okType:'danger',cancelText:'取消',async onOk(){try{if(row.status==='pending')await post('/api/order/cancel',{order_id:row.id});await post('/api/order/delete',{id:row.id});message.success('订单已删除');detailOpen.value=false;await load()}catch(e){message.error(errorMessage(e))}}})}
 function cleanup(){Modal.confirm({title:'关闭超时未支付订单？',content:'系统将向微信查询付款结果，仅关闭超过 30 分钟且确认未付款的订单，不删除订单与设计快照。',okText:'确认处理',okType:'danger',cancelText:'取消',async onOk(){cleaning.value=true;try{const result:any=await post('/api/order/cleanup',{minutes:30});message.success(`已关闭 ${result?.closed_count||0} 笔，补记已支付 ${result?.paid_count||0} 笔，失败 ${result?.failed_count||0} 笔`);await load()}catch(e){message.error(errorMessage(e))}finally{cleaning.value=false}}})}
 function openReview(action:'approve'|'reject'|'refund'){reviewAction.value=action;reviewRemark.value='';reviewOpen.value=true}
