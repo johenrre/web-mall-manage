@@ -15,7 +15,7 @@
         <article v-for="record in orders" :key="record.id" class="order-card" :class="`is-${record.status}`">
           <header class="order-card__header">
             <div class="order-identity"><a class="order-link mono" @click="openDetail(record)">{{ record.order_no }}</a><span>ID {{ record.id }}</span><span>{{ dateTime(record.created_at) }}</span></div>
-            <div class="order-state"><a-tag v-if="record.status==='refund'" :color="refundMap[record.refund_status]?.color||'gold'">{{ refundMap[record.refund_status]?.text||'处理中' }}</a-tag><StatusTag v-else :status="record.status" :map="orderStatus" /></div>
+            <div class="order-state"><a-tag v-if="record.status==='refund'" :color="refundMap[record.refund_status]?.color||'gold'">{{ refundMap[record.refund_status]?.text||'处理中' }}</a-tag><template v-else><StatusTag :status="record.status" :map="orderStatus" /><a-tag v-if="record.refund_status==='rejected'" color="red">售后已拒绝</a-tag></template></div>
           </header>
 
           <div class="order-card__body">
@@ -61,7 +61,7 @@
     <div v-if="total>pageSize" class="order-pagination"><a-pagination :current="page" :page-size="pageSize" :total="total" show-size-changer :show-total="(n:number)=>`共 ${n} 笔订单`" @change="onPageChange" /></div>
 
     <a-drawer v-model:open="detailOpen" title="订单详情" placement="right" :width="900">
-      <template #extra><a-tag v-if="selected?.status==='refund'" :color="refundMap[selected.refund_status]?.color||'gold'">{{ refundMap[selected.refund_status]?.text||'处理中' }}</a-tag><StatusTag v-else-if="selected" :status="selected.status" :map="orderStatus" /></template>
+      <template #extra><a-tag v-if="selected?.status==='refund'" :color="refundMap[selected.refund_status]?.color||'gold'">{{ refundMap[selected.refund_status]?.text||'处理中' }}</a-tag><template v-else-if="selected"><StatusTag :status="selected.status" :map="orderStatus" /><a-tag v-if="selected.refund_status==='rejected'" color="red">售后已拒绝</a-tag></template></template>
       <div v-if="selected" class="detail-stack">
         <div class="detail-hero"><div><span class="muted">订单编号</span><h2 class="mono">{{ selected.order_no }}</h2><div class="muted">创建于 {{ dateTime(selected.created_at) }}</div></div><span class="hero-money">{{ money(selected.total_price) }}</span></div>
 
@@ -120,8 +120,8 @@
           <a-descriptions-item v-if="selected.wechat_shipping_error" label="同步说明" :span="2">{{ selected.wechat_shipping_error }}</a-descriptions-item>
         </a-descriptions>
 
-        <section v-if="selected.status==='refund'" class="aftersale-panel">
-          <div class="section-heading"><div><h3>售后处理</h3><p>审核申请、确认退货并完成原路退款</p></div><a-tag :color="refundMap[selected.refund_status]?.color||'gold'">{{ refundMap[selected.refund_status]?.text||'处理中' }}</a-tag></div>
+        <section v-if="selected.refund_status" class="aftersale-panel">
+          <div class="section-heading"><div><h3>售后处理</h3><p>{{ selected.refund_status==='rejected'?'申请已拒绝，订单已恢复原来的履约状态':'审核申请、确认退货并完成原路退款' }}</p></div><a-tag :color="refundMap[selected.refund_status]?.color||'gold'">{{ refundMap[selected.refund_status]?.text||'处理中' }}</a-tag></div>
           <a-descriptions bordered :column="1" size="small" class="aftersale-reasons">
             <a-descriptions-item label="售后类型">{{ selected.refund_type==='refund_only'?'仅退款':'退货退款' }}</a-descriptions-item>
             <a-descriptions-item label="用户申请原因">{{ selected.refund_reason||'用户未填写售后原因' }}</a-descriptions-item>
