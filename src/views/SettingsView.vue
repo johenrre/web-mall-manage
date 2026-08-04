@@ -172,13 +172,50 @@
               </a-form-item>
             </section>
 
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="service">
+          <template #tab><span><CustomerServiceOutlined /> 用户售后与服务</span></template>
+          <div class="settings-content">
+            <div class="section-intro">
+              <h2>用户售后与服务</h2>
+              <p>配置小程序购买须知、退款原因和售后退货地址。</p>
+            </div>
+
             <section class="setting-section">
-              <h3 class="setting-section-title">用户服务与售后</h3>
+              <h3 class="setting-section-title">用户服务</h3>
               <a-form-item label="购买须知">
                 <a-textarea v-model:value="form.miniprogram_purchase_notice" :rows="4" placeholder="下单前向用户展示的说明" />
               </a-form-item>
             </section>
 
+            <section class="setting-section">
+              <h3 class="setting-section-title">售后服务</h3>
+              <a-form-item label="用户可选退款原因">
+                <div class="refund-reason-list">
+                  <div v-for="(reason, index) in refundReasons" :key="index" class="refund-reason-row">
+                    <span class="refund-reason-order">{{ index + 1 }}</span>
+                    <a-input v-model:value="refundReasons[index]" maxlength="20" placeholder="例如：质量问题" />
+                    <a-space>
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveRefundReason(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === refundReasons.length - 1" title="下移" @click="moveRefundReason(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger :disabled="refundReasons.length <= 1" title="删除" @click="removeRefundReason(index)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </div>
+                  <a-button type="dashed" block :disabled="refundReasons.length >= 10" @click="addRefundReason"><PlusOutlined /> 添加退款原因</a-button>
+                </div>
+                <div class="field-help">小程序申请售后时显示，最多 10 项；选择“其他问题”时用户必须填写详细说明。</div>
+              </a-form-item>
+              <a-form-item label="售后退货地址">
+                <a-textarea
+                  v-model:value="form.refund_return_address"
+                  :rows="4"
+                  placeholder="收件人、电话、详细地址和注意事项"
+                />
+                <div class="field-help">用于用户退货时展示收件信息，请填写完整联系人、电话和地址。</div>
+              </a-form-item>
+            </section>
           </div>
         </a-tab-pane>
 
@@ -246,32 +283,6 @@
                 </a-form-item>
               </div>
             </section>
-            <section class="setting-section">
-              <h3 class="setting-section-title">售后服务</h3>
-              <a-form-item label="用户可选退款原因">
-                <div class="refund-reason-list">
-                  <div v-for="(reason, index) in refundReasons" :key="index" class="refund-reason-row">
-                    <span class="refund-reason-order">{{ index + 1 }}</span>
-                    <a-input v-model:value="refundReasons[index]" maxlength="20" placeholder="例如：质量问题" />
-                    <a-space>
-                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveRefundReason(index, -1)"><ArrowUpOutlined /></a-button>
-                      <a-button size="small" :disabled="index === refundReasons.length - 1" title="下移" @click="moveRefundReason(index, 1)"><ArrowDownOutlined /></a-button>
-                      <a-button size="small" danger :disabled="refundReasons.length <= 1" title="删除" @click="removeRefundReason(index)"><DeleteOutlined /></a-button>
-                    </a-space>
-                  </div>
-                  <a-button type="dashed" block :disabled="refundReasons.length >= 10" @click="addRefundReason"><PlusOutlined /> 添加退款原因</a-button>
-                </div>
-                <div class="field-help">小程序申请售后时显示，最多 10 项；选择“其他问题”时用户必须填写详细说明。</div>
-              </a-form-item>
-              <a-form-item label="售后退货地址">
-                <a-textarea
-                  v-model:value="form.refund_return_address"
-                  :rows="4"
-                  placeholder="收件人、电话、详细地址和注意事项"
-                />
-                <div class="field-help">用于用户退货时展示收件信息，请填写完整联系人、电话和地址。</div>
-              </a-form-item>
-            </section>
             <!-- 暂时隐藏积分规则，后续需要时取消本段注释即可恢复。
             <section class="setting-section">
               <h3 class="setting-section-title">积分规则</h3>
@@ -295,6 +306,7 @@ import {
   ApiOutlined,
   ArrowDownOutlined,
   ArrowUpOutlined,
+  CustomerServiceOutlined,
   DeleteOutlined,
   MobileOutlined,
   PictureOutlined,
