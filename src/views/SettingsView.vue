@@ -233,6 +233,10 @@
                 <a-form-item class="span-2" label="支付回调地址">
                   <a-input v-model:value="form.wxpay_notify_url" placeholder="https://域名/api/pay/notify_wxpay" />
                 </a-form-item>
+                <a-form-item class="span-2" label="退款回调地址">
+                  <a-input v-model:value="form.wxpay_refund_notify_url" placeholder="https://域名/api/pay/notify_wxpay_refund" />
+                  <div class="field-help">微信退款结果通知地址；留空时后端会根据支付回调地址自动生成。</div>
+                </a-form-item>
                 <a-form-item class="span-2" label="商户 API 私钥">
                   <a-textarea v-model:value="form.wxpay_private_key" name="wxpay-private-key" autocomplete="off" :rows="6" class="secret-area" />
                 </a-form-item>
@@ -244,6 +248,21 @@
             </section>
             <section class="setting-section">
               <h3 class="setting-section-title">售后服务</h3>
+              <a-form-item label="用户可选退款原因">
+                <div class="refund-reason-list">
+                  <div v-for="(reason, index) in refundReasons" :key="index" class="refund-reason-row">
+                    <span class="refund-reason-order">{{ index + 1 }}</span>
+                    <a-input v-model:value="refundReasons[index]" maxlength="20" placeholder="例如：质量问题" />
+                    <a-space>
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveRefundReason(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === refundReasons.length - 1" title="下移" @click="moveRefundReason(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger :disabled="refundReasons.length <= 1" title="删除" @click="removeRefundReason(index)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </div>
+                  <a-button type="dashed" block :disabled="refundReasons.length >= 10" @click="addRefundReason"><PlusOutlined /> 添加退款原因</a-button>
+                </div>
+                <div class="field-help">小程序申请售后时显示，最多 10 项；选择“其他问题”时用户必须填写详细说明。</div>
+              </a-form-item>
               <a-form-item label="售后退货地址">
                 <a-textarea
                   v-model:value="form.refund_return_address"
@@ -253,19 +272,6 @@
                 <div class="field-help">用于用户退货时展示收件信息，请填写完整联系人、电话和地址。</div>
               </a-form-item>
             </section>
-            <!-- 暂时隐藏推广分佣，后续需要时取消本段注释即可恢复。
-            <section class="setting-section">
-              <h3 class="setting-section-title">推广分佣</h3>
-              <div class="form-grid">
-                <a-form-item label="一级推广分佣比例">
-                  <a-input-number v-model:value="form.commission_rate_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
-                </a-form-item>
-                <a-form-item label="二级推广分佣比例">
-                  <a-input-number v-model:value="form.commission_rate_level2_percent" :min="0" :max="100" :precision="2" addon-after="%" style="width: 100%" />
-                </a-form-item>
-              </div>
-            </section>
-            -->
             <!-- 暂时隐藏积分规则，后续需要时取消本段注释即可恢复。
             <section class="setting-section">
               <h3 class="setting-section-title">积分规则</h3>
@@ -341,6 +347,7 @@ const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const contact = reactive({ wechatId: '', wechatQr: '' })
 const slides = ref<EditableHomeSlide[]>([])
+const refundReasons = ref<string[]>([])
 const mainEntrySlots = ref<EditableImageSlot[]>([
   { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
   { key: 'finished-style', label: '制作同款', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
@@ -381,6 +388,7 @@ const stringKeys = [
   'wxpay_public_key_id',
   'wxpay_public_key',
   'wxpay_notify_url',
+  'wxpay_refund_notify_url',
 ]
 const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
 
@@ -481,13 +489,17 @@ async function load() {
   loading.value = true
   try {
     const data: any = await get('/api/admin/settings_get')
-    Object.assign(form, data, {
-      commission_rate_percent: Number(data.commission_rate || 0) * 100,
-      commission_rate_level2_percent: Number(data.commission_rate_level2 || 0) * 100,
-    })
+    Object.assign(form, data)
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
     for (const key of boolKeys) form[key] = boolValue(data[key])
     slides.value = parseSlides(data.miniprogram_home_slides_json)
+    try {
+      const parsed = JSON.parse(String(data.miniprogram_refund_reasons_json || '[]'))
+      refundReasons.value = Array.isArray(parsed) ? parsed.map((item) => text(item)).filter(Boolean).slice(0, 10) : []
+    } catch {
+      refundReasons.value = []
+    }
+    if (refundReasons.value.length === 0) refundReasons.value = ['质量问题', '商品与描述不符', '其他问题']
     hydrateImageSlots(mainEntrySlots.value, data.miniprogram_home_main_entries_json)
     hydrateImageSlots(shortcutSlots.value, data.miniprogram_home_shortcuts_json)
     try {
@@ -526,6 +538,23 @@ function removeSlide(rowKey: string) {
   slides.value = slides.value.filter((slide) => slide.rowKey !== rowKey)
 }
 
+function addRefundReason() {
+  if (refundReasons.value.length >= 10) return message.warning('售后原因最多配置 10 项')
+  refundReasons.value.push('')
+}
+
+function moveRefundReason(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= refundReasons.value.length) return
+  const [reason] = refundReasons.value.splice(index, 1)
+  if (reason !== undefined) refundReasons.value.splice(target, 0, reason)
+}
+
+function removeRefundReason(index: number) {
+  if (refundReasons.value.length <= 1) return message.warning('至少保留一条售后原因')
+  refundReasons.value.splice(index, 1)
+}
+
 function validateSlideFile(file: File) {
   if (file.size > 5 * 1024 * 1024) {
     message.error('图片大小不能超过 5 MB')
@@ -554,30 +583,25 @@ async function uploadSlide(options: any, slide: EditableHomeSlide) {
 }
 
 async function save() {
-  if (
-    form.commission_rate_percent < 0 ||
-    form.commission_rate_percent > 100 ||
-    form.commission_rate_level2_percent < 0 ||
-    form.commission_rate_level2_percent > 100
-  ) {
-    return message.warning('分佣比例必须在 0% 到 100% 之间')
-  }
   for (const slide of slides.value) slide.image = normalizeSlideImage(slide.image)
   if (slides.value.some((slide) => !slide.image)) {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
   }
   if (slides.value.length > 5) return message.warning('首页轮播最多配置 5 张')
+  const normalizedRefundReasons = refundReasons.value.map((reason) => text(reason))
+  if (normalizedRefundReasons.some((reason) => !reason)) return message.warning('售后原因不能为空')
+  if (normalizedRefundReasons.some((reason) => reason.length > 20)) return message.warning('每条售后原因不能超过 20 个字符')
+  if (new Set(normalizedRefundReasons).size !== normalizedRefundReasons.length) return message.warning('售后原因不能重复')
   const homeMusicUrl = text(form.miniprogram_home_music_url)
   if (homeMusicUrl && !/^https:\/\//i.test(homeMusicUrl)) {
     return message.warning('首页背景音乐必须使用 HTTPS 地址')
   }
   const payload: Record<string, unknown> = {
-    commission_rate: Number(form.commission_rate_percent) / 100,
-    commission_rate_level2: Number(form.commission_rate_level2_percent) / 100,
     contact_service_json: JSON.stringify(contact),
     miniprogram_home_slides_json: serializeSlides(),
     miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
+    miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
   }
   for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
   for (const key of boolKeys) payload[key] = Boolean(form[key])
@@ -630,6 +654,9 @@ onMounted(() => {
 .slide-image-preview { display: grid; width: 96px; height: 64px; overflow: hidden; flex: 0 0 96px; place-items: center; border: 1px dashed #cbd8d2; border-radius: 9px; color: #93a39c; background: #f5f8f7; font-size: 22px; }
 .slide-image-preview img { width: 100%; height: 100%; object-fit: cover; }
 .slide-image-inputs { display: flex; min-width: 180px; flex: 1; flex-direction: column; align-items: flex-start; gap: 7px; }
+.refund-reason-list { display: flex; max-width: 720px; flex-direction: column; gap: 10px; }
+.refund-reason-row { display: grid; grid-template-columns: 28px minmax(220px, 1fr) auto; align-items: center; gap: 10px; }
+.refund-reason-order { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #577067; background: #edf4f1; font-size: 12px; font-weight: 700; }
 @media (max-width: 850px) {
   .asset-grid--two { grid-template-columns: 1fr; }
   .settings-tabs { flex-direction: column; }

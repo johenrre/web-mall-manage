@@ -76,7 +76,7 @@ const isMobile = ref(window.innerWidth <= 768)
 const collapsed = ref(window.innerWidth < 1100)
 const passwordOpen = ref(false)
 const refreshId = ref(0)
-const notifications = ref({ paidPendingShipCount: 0, unreadRefundMessageOrders: 0 })
+const notifications = ref({ paidPendingShipCount: 0 })
 let timer: number | undefined
 
 const initials = computed(() => (auth.state.user?.nickname || auth.state.user?.username || '管').slice(0, 1).toUpperCase())
@@ -92,9 +92,8 @@ const menuItems = computed(() => [
   { key: 'stats', icon: () => h(BarChartOutlined), label: '经营概览' },
   { type: 'group', label: collapsed.value ? '' : '交易与用户', children: [
     { key: 'orders', icon: () => h(ShoppingCartOutlined), label: labelWithBadge('订单管理', notifications.value.paidPendingShipCount) },
-    { key: 'aftersales', icon: () => h(SolutionOutlined), label: labelWithBadge('售后管理', notifications.value.unreadRefundMessageOrders) },
-    // 小程序第一阶段暂不展示提现和现金卡券入口；页面与路由保留，后续可直接恢复。
-    // { key: 'withdraws', icon: () => h(BankOutlined), label: '提现管理' },
+    { key: 'aftersales', icon: () => h(SolutionOutlined), label: '售后管理' },
+    // 小程序第一阶段暂不展示现金卡券入口；页面与路由保留，后续可直接恢复。
     // { key: 'coupons', icon: () => h(GiftOutlined), label: '现金卡券' },
     { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' },
   ]},

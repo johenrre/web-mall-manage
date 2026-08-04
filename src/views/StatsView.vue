@@ -186,7 +186,6 @@ import {
   FireOutlined,
   FundOutlined,
   LineChartOutlined,
-  MessageOutlined,
   MinusOutlined,
   PictureOutlined,
   ReloadOutlined,
@@ -243,8 +242,6 @@ interface DashboardStats {
     paid_pending_ship: number
     refund_review: number
     design_review: number
-    unread_refund_messages: number
-    unread_refund_message_orders: number
   }
   daily_trend: DailyTrend[]
   recent_orders: Array<{
@@ -290,8 +287,6 @@ const emptyStats: DashboardStats = {
     paid_pending_ship: 0,
     refund_review: 0,
     design_review: 0,
-    unread_refund_messages: 0,
-    unread_refund_message_orders: 0,
   },
   daily_trend: [],
   recent_orders: [],
@@ -410,14 +405,6 @@ const pendingItems = computed(() => [
     path: '/designs',
     icon: AuditOutlined,
     tone: 'blue',
-  },
-  {
-    label: '未读售后消息',
-    description: `${stats.value.pending.unread_refund_message_orders} 笔订单有新消息`,
-    count: stats.value.pending.unread_refund_messages,
-    path: '/aftersales',
-    icon: MessageOutlined,
-    tone: 'violet',
   },
 ])
 
