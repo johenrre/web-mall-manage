@@ -35,7 +35,7 @@
 
             <section class="card-info"><span class="block-label">收件信息</span><h4>{{ record.consignee||'未填写' }} <small class="mono">{{ record.phone||'—' }}</small></h4><p :title="record.address">{{ record.address||'未填写收货地址' }}</p><small>下单用户：{{ record.user?.nickname||record.user?.username||`用户 ${record.user_id}` }}</small></section>
 
-            <section class="card-fulfillment"><span class="block-label">制作与配送</span><p><i>制作</i>{{ optionText('production',record.production_method) }}</p><p><i>包装</i>{{ optionText('packaging',record.packaging_method) }}</p><p><i>绳线</i>{{ record.rope_color||'默认' }}</p><p><i>配送</i>{{ optionText('express',record.express_method) }}</p></section>
+            <section class="card-fulfillment"><span class="block-label">制作与配送</span><p><i>制作</i>{{ optionText('production',record.production_method) }}</p><p><i>包装</i>{{ optionText('packaging',record.packaging_method) }}</p><p><i>绳线</i>{{ record.rope_color||'默认' }}</p><p><i>配送</i>{{ optionText('express',record.express_method) }}</p><p v-if="record.greeting_card"><i>贺卡</i>{{ optionText('greeting',record.greeting_card) }}</p></section>
 
             <section class="card-settlement">
               <span class="block-label">订单金额</span>
@@ -86,7 +86,7 @@
         </a-descriptions>
 
         <section class="products-panel">
-          <div class="section-heading"><div><h3>商品清单</h3><p>{{ itemsOf(selected).length }} 种商品，共 {{ totalItemQuantity(selected) }} 件</p></div><div class="chips"><span>制作：{{ optionText('production',selected.production_method) }}</span><span>包装：{{ optionText('packaging',selected.packaging_method) }}</span><span>绳线：{{ selected.rope_color||'默认' }}</span><span>配送：{{ optionText('express',selected.express_method) }}</span></div></div>
+          <div class="section-heading"><div><h3>商品清单</h3><p>{{ itemsOf(selected).length }} 种商品，共 {{ totalItemQuantity(selected) }} 件</p></div><div class="chips"><span>制作：{{ optionText('production',selected.production_method) }}</span><span>包装：{{ optionText('packaging',selected.packaging_method) }}</span><span>绳线：{{ selected.rope_color||'默认' }}</span><span>配送：{{ optionText('express',selected.express_method) }}</span><span v-if="selected.greeting_card">贺卡：{{ optionText('greeting',selected.greeting_card) }}</span></div></div>
           <article v-for="item in itemsOf(selected)" :key="`${item.item_type}:${item.ref_id}`" class="detail-product">
             <div class="detail-product__preview">
               <BraceletPreview v-if="isDiyItem(item)" :pattern="itemPattern(item)" :material-map="itemMaterialMap(item)" :size="112" @select="showBead" />
@@ -212,7 +212,7 @@ function materialsOf(record:any):DesignMaterial[]{
   }
   return [...materialMap.values()]
 }
-function optionText(group:'production'|'packaging'|'express',value:unknown){const code=String(value||'');const maps:Record<string,Record<string,string>>={production:{diy:'自主设计',assembled:'成品制作'},packaging:{normal:'普通包装',gift:'礼盒包装'},express:{yunda:'韵达快递',sf:'顺丰快递'}};return maps[group][code]||code||'未选择'}
+function optionText(group:'production'|'packaging'|'express'|'greeting',value:unknown){const code=String(value||'');const maps:Record<string,Record<string,string>>={production:{diy:'自主设计',assembled:'成品制作'},packaging:{normal:'普通包装',gift:'礼盒包装'},express:{yunda:'韵达快递',sf:'顺丰快递'},greeting:{none:'无需贺卡',greeting_card:'精美贺卡'}};return maps[group][code]||code||'未选择'}
 function openDetail(row:any){selected.value=row;detailOpen.value=true}
 function expressName(code:string){return expressCompanies.find(item=>item.code===code)?.name||''}
 function expressCode(name:string){return expressCompanies.find(item=>item.name===name)?.code||''}
