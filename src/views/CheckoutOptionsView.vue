@@ -8,7 +8,7 @@
     <a-alert
       type="info"
       show-icon
-      message="可关闭整个分组或单个选项；关闭后小程序不展示、后端也不计费。满额免费只按商品金额判断，填 0 表示不启用满额优惠。"
+      message="小程序会按商品金额智能选择：有免费项时默认选原价最高的一项，没有免费项时默认选价格最低的一项。满额免费填 0 表示不启用。"
     />
 
     <a-skeleton v-if="loading" active :paragraph="{ rows: 10 }" />
@@ -49,20 +49,9 @@
             :key="option.uid"
             class="option-card"
             :class="{
-              selected: group.selectedOptionCode === option.optionCode,
               disabled: !group.enabled || !option.enabled,
             }"
           >
-            <button
-              class="default-radio"
-              :disabled="!group.enabled || !option.enabled"
-              @click="setDefault(group, option)"
-            >
-              <CheckCircleFilled v-if="group.selectedOptionCode === option.optionCode" />
-              <span v-else />
-              <small>默认</small>
-            </button>
-
             <div class="option-editor">
               <div class="option-fields">
                 <label><small>选项名称</small><a-input v-model:value="option.title" placeholder="例如：礼盒包装" /></label>
@@ -103,7 +92,6 @@
                   v-model:checked="option.enabled"
                   checked-children="启用"
                   un-checked-children="停用"
-                  @change="handleEnabledChange(group, option)"
                 />
               </div>
             </div>
@@ -122,7 +110,6 @@
 import { onMounted, ref } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import {
-  CheckCircleFilled,
   CloseOutlined,
   DeleteOutlined,
   PictureOutlined,
@@ -152,7 +139,6 @@ interface Group {
   groupCode: string
   title: string
   enabled: boolean
-  selectedOptionCode: string
   options: Option[]
 }
 
@@ -168,23 +154,23 @@ const option = (
 
 const defaults: Array<Omit<Group, 'uid'>> = [
   {
-    groupCode: 'productionMethod', title: '制作方式', enabled: true, selectedOptionCode: 'assembled',
+    groupCode: 'productionMethod', title: '制作方式', enabled: true,
     options: [option('diy', '自己动手', '仅购买当前设计所需珠子', 0, true), option('assembled', '串好成品', '由工坊按当前设计串好后发出', 9.9)],
   },
   {
-    groupCode: 'packaging', title: '包装方式', enabled: true, selectedOptionCode: 'gift',
+    groupCode: 'packaging', title: '包装方式', enabled: true,
     options: [option('normal', '普通包装', '随单附基础收纳包装', 0, true), option('gift', '礼盒包装', '适合作为礼物赠送', 10, false, 200)],
   },
   {
-    groupCode: 'ropeColor', title: '选择绳线颜色', enabled: true, selectedOptionCode: 'transparent',
+    groupCode: 'ropeColor', title: '选择绳线颜色', enabled: true,
     options: [option('transparent', '透明弹力线', '通用百搭，适合水晶与浅色珠', 0, true), option('black', '黑色弹力线', '适合深色珠与文玩质感', 0, true)],
   },
   {
-    groupCode: 'shipping', title: '快递选择', enabled: true, selectedOptionCode: 'yunda',
+    groupCode: 'shipping', title: '快递选择', enabled: true,
     options: [option('yunda', '韵达快递', '普通快递', 9, false, 99), option('sf', '顺丰快递', '顺丰配送', 18)],
   },
   {
-    groupCode: 'greetingCard', title: '贺卡', enabled: true, selectedOptionCode: 'none',
+    groupCode: 'greetingCard', title: '贺卡', enabled: true,
     options: [option('none', '无需贺卡', '不随单附赠贺卡', 0, true), option('greeting_card', '精美贺卡', '随礼盒附一张祝福贺卡', 1)],
   },
 ]
@@ -204,9 +190,8 @@ function hydrate(input: any[]): Group[] {
     const saved = input.find((group) => group?.groupCode === fallback.groupCode) || fallback
     const options = Array.isArray(saved.options) && saved.options.length ? saved.options : fallback.options
     return {
-      ...fallback,
-      ...saved,
       groupCode: fallback.groupCode,
+      title: String(saved.title || fallback.title),
       enabled: isEnabled(saved.enabled),
       uid: uid(),
       options: options.map((source: any) => {
@@ -247,31 +232,14 @@ function addOption(groupIndex: number) {
   })
 }
 
-function firstEnabledCode(group: Group): string {
-  return group.options.find((item) => item.enabled)?.optionCode || ''
-}
-
-function setDefault(group: Group, item: Option) {
-  if (group.enabled && item.enabled) group.selectedOptionCode = item.optionCode
-}
-
 function handleFreeChange(item: Option) {
   if (!item.isFree) return
   item.amount = 0
   item.freeThreshold = 0
 }
 
-function handleEnabledChange(group: Group, item: Option) {
-  if (!item.enabled && group.selectedOptionCode === item.optionCode) {
-    group.selectedOptionCode = firstEnabledCode(group)
-  }
-}
-
 function removeOption(groupIndex: number, optionIndex: number) {
-  const group = groups.value[groupIndex]!
-  const removed = group.options[optionIndex]
-  group.options.splice(optionIndex, 1)
-  if (group.selectedOptionCode === removed?.optionCode) group.selectedOptionCode = firstEnabledCode(group)
+  groups.value[groupIndex]!.options.splice(optionIndex, 1)
 }
 
 async function uploadOptionImage(request: any, item: Option) {
@@ -324,9 +292,6 @@ async function save() {
       message.warning(`“${group.title}”启用时至少需要一个启用选项`)
       return
     }
-    if (group.enabled && !enabledOptions.some((item) => item.optionCode === group.selectedOptionCode)) {
-      group.selectedOptionCode = enabledOptions[0]!.optionCode
-    }
   }
 
   saving.value = true
@@ -363,13 +328,8 @@ onMounted(load)
 .group-header small { color: #9aa6a1; font-size: 10px; }
 .group-config { padding-top: 8px; }
 .option-list { display: flex; flex-direction: column; margin-bottom: 12px; gap: 10px; }
-.option-card { display: grid; grid-template-columns: 52px minmax(0, 1fr) 36px; align-items: center; padding: 14px; border: 1px solid #e7ecea; border-radius: 12px; background: #fafbfa; gap: 12px; }
-.option-card.selected { border-color: #84ac9e; background: #f2f8f5; }
+.option-card { display: grid; grid-template-columns: minmax(0, 1fr) 36px; align-items: center; padding: 14px; border: 1px solid #e7ecea; border-radius: 12px; background: #fafbfa; gap: 12px; }
 .option-card.disabled { opacity: .62; background: #f5f5f5; }
-.default-radio { display: flex; flex-direction: column; align-items: center; border: 0; color: #2c705d; background: transparent; cursor: pointer; gap: 3px; }
-.default-radio:disabled { cursor: not-allowed; }
-.default-radio > span { width: 16px; height: 16px; border: 1px solid #b8c5c0; border-radius: 50%; }
-.default-radio small { font-size: 9px; }
 .option-editor { min-width: 0; }
 .option-fields { display: grid; grid-template-columns: 1fr 1fr 1.4fr 120px 130px; align-items: end; gap: 10px; }
 .option-fields label { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
@@ -382,5 +342,5 @@ onMounted(load)
 .option-image-actions > div { display: flex; align-items: center; margin-top: 4px; gap: 5px; }
 .option-switches { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; gap: 18px; }
 @media (max-width: 1280px) { .option-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .option-fields__wide { grid-column: span 2; } }
-@media (max-width: 600px) { .option-card { grid-template-columns: 42px minmax(0, 1fr) 32px; } .option-fields { grid-template-columns: 1fr; } .option-fields__wide { grid-column: auto; } }
+@media (max-width: 600px) { .option-card { grid-template-columns: minmax(0, 1fr) 32px; } .option-fields { grid-template-columns: 1fr; } .option-fields__wide { grid-column: auto; } }
 </style>
