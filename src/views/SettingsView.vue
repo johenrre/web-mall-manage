@@ -61,8 +61,20 @@
                 <a-form-item label="客服微信号">
                   <a-input v-model:value="contact.wechatId" placeholder="客服微信号" />
                 </a-form-item>
-                <a-form-item label="客服微信二维码">
-                  <ImageUploader v-model="contact.wechatQr" />
+                <a-form-item class="form-grid__wide" label="客服微信二维码">
+                  <div class="contact-qr-list">
+                    <div v-for="(item, index) in contactQrs" :key="item.rowKey" class="contact-qr-row">
+                      <div class="contact-qr-order">{{ index + 1 }}</div>
+                      <ImageUploader v-model="item.image" />
+                      <a-button danger title="删除" @click="removeContactQr(item.rowKey)">
+                        <DeleteOutlined />
+                      </a-button>
+                    </div>
+                    <a-button type="dashed" block :disabled="contactQrs.length >= 10" @click="addContactQr">
+                      <PlusOutlined /> 添加客服二维码
+                    </a-button>
+                    <div class="field-help">最多配置 10 个；用户每次打开客服弹窗时随机展示其中一个。</div>
+                  </div>
                 </a-form-item>
               </div>
             </section>
@@ -489,6 +501,12 @@ interface EditableTrayImage {
   image: string
 }
 
+interface EditableContactQr {
+  rowKey: string
+  id: string
+  image: string
+}
+
 interface StorageStatus {
   provider: 'oss' | 'local'
   oss: {
@@ -509,7 +527,8 @@ const uploadingSlideKey = ref('')
 const uploadingTrayKey = ref('')
 const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
-const contact = reactive({ wechatId: '', wechatQr: '' })
+const contact = reactive({ wechatId: '' })
+const contactQrs = ref<EditableContactQr[]>([])
 const slides = ref<EditableHomeSlide[]>([])
 const trayImages = ref<EditableTrayImage[]>([])
 const refundReasons = ref<string[]>([])
@@ -525,6 +544,7 @@ const shortcutSlots = ref<EditableImageSlot[]>([
 ])
 let slideSequence = 0
 let trayImageSequence = 0
+let contactQrSequence = 0
 
 const slideColumns = [
   { title: '主图', key: 'image', width: 310 },
@@ -670,6 +690,50 @@ function serializeTrayImages(): string {
   })))
 }
 
+function createContactQr(source: any = {}): EditableContactQr {
+  contactQrSequence += 1
+  const rawImage = typeof source === 'string'
+    ? source
+    : source.image || source.imageUrl || source.image_url || source.url || source.wechatQr
+  return {
+    rowKey: `contact-qr-editor-${contactQrSequence}`,
+    id: text(source?.id) || `contact-qr-${Date.now()}-${contactQrSequence}`,
+    image: normalizeSlideImage(rawImage),
+  }
+}
+
+function hydrateContact(value: unknown): void {
+  let source: Record<string, any> = {}
+  try {
+    const parsed = JSON.parse(text(value) || '{}')
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) source = parsed
+  } catch {
+    message.error('数据库中的客服配置格式错误，请重新配置')
+  }
+  contact.wechatId = text(source.wechatId)
+  const configuredList = Array.isArray(source.wechatQrs)
+    ? source.wechatQrs
+    : Array.isArray(source.wechatQrUrls)
+      ? source.wechatQrUrls
+      : []
+  const configured = configuredList.length > 0
+    ? configuredList
+    : source.wechatQr ? [source.wechatQr] : []
+  contactQrs.value = configured.map(createContactQr).filter((item) => item.image).slice(0, 10)
+}
+
+function serializeContact(): string {
+  const items = contactQrs.value.map((item) => ({
+    id: item.id,
+    image: normalizeSlideImage(item.image),
+  }))
+  return JSON.stringify({
+    wechatId: text(contact.wechatId),
+    wechatQr: items[0]?.image || '',
+    wechatQrs: items,
+  })
+}
+
 function hydrateImageSlots(slots: EditableImageSlot[], value: unknown): void {
   try {
     const parsed = JSON.parse(text(value) || '[]')
@@ -712,11 +776,7 @@ async function load() {
     if (refundReasons.value.length === 0) refundReasons.value = ['质量问题', '商品与描述不符', '其他问题']
     hydrateImageSlots(mainEntrySlots.value, data.miniprogram_home_main_entries_json)
     hydrateImageSlots(shortcutSlots.value, data.miniprogram_home_shortcuts_json)
-    try {
-      Object.assign(contact, JSON.parse(data.contact_service_json || '{}'))
-    } catch {
-      Object.assign(contact, { wechatId: '', wechatQr: '' })
-    }
+    hydrateContact(data.contact_service_json)
   } catch (error) {
     message.error(errorMessage(error))
   } finally {
@@ -762,6 +822,15 @@ function moveTrayImage(index: number, offset: number) {
 
 function removeTrayImage(rowKey: string) {
   trayImages.value = trayImages.value.filter((item) => item.rowKey !== rowKey)
+}
+
+function addContactQr() {
+  if (contactQrs.value.length >= 10) return message.warning('客服二维码最多配置 10 个')
+  contactQrs.value.push(createContactQr())
+}
+
+function removeContactQr(rowKey: string) {
+  contactQrs.value = contactQrs.value.filter((item) => item.rowKey !== rowKey)
 }
 
 function addRefundReason() {
@@ -834,6 +903,11 @@ async function save() {
     return message.warning('每个 DIY 珠盘都必须填写图片地址或上传图片')
   }
   if (trayImages.value.length > 5) return message.warning('DIY 珠盘最多配置 5 张')
+  for (const item of contactQrs.value) item.image = normalizeSlideImage(item.image)
+  if (contactQrs.value.some((item) => !item.image)) {
+    return message.warning('请上传客服二维码，或删除未填写的二维码项')
+  }
+  if (contactQrs.value.length > 10) return message.warning('客服二维码最多配置 10 个')
   const normalizedRefundReasons = refundReasons.value.map((reason) => text(reason))
   if (normalizedRefundReasons.some((reason) => !reason)) return message.warning('售后原因不能为空')
   if (normalizedRefundReasons.some((reason) => reason.length > 20)) return message.warning('每条售后原因不能超过 20 个字符')
@@ -843,7 +917,7 @@ async function save() {
     return message.warning('首页背景音乐必须使用 HTTPS 地址')
   }
   const payload: Record<string, unknown> = {
-    contact_service_json: JSON.stringify(contact),
+    contact_service_json: serializeContact(),
     miniprogram_home_slides_json: serializeSlides(),
     miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
@@ -893,6 +967,10 @@ onMounted(() => {
 .asset-grid { display: grid; gap: 18px 24px; }
 .asset-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .asset-grid :deep(.ant-form-item) { min-width: 0; margin-bottom: 0; }
+.form-grid__wide { grid-column: 1 / -1; }
+.contact-qr-list { display: flex; max-width: 760px; flex-direction: column; gap: 12px; }
+.contact-qr-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5ece8; border-radius: 12px; background: #fafcfb; }
+.contact-qr-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: #557067; background: #eaf2ee; font-size: 12px; font-weight: 700; }
 .secret-area { font-family: 'SFMono-Regular', Consolas, monospace; }
 .slide-table { overflow: hidden; border: 1px solid #e5ece8; border-radius: 12px; }
 .slide-table :deep(.ant-table-thead > tr > th) { color: #49645b; background: #f4f8f6; font-size: 12px; }

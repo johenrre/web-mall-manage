@@ -16,7 +16,7 @@
       class="role-tip"
       type="info"
       show-icon
-      message="管理员可访问全部功能；普通账号可处理日常业务，但不能进入系统设置和账号权限。"
+      message="管理员可访问全部功能；普通账号可处理日常业务，但不能进入商城配置、系统设置和账号权限。"
     />
 
     <a-card class="surface-card" :bordered="false">

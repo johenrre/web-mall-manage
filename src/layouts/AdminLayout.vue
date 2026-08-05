@@ -103,12 +103,14 @@ const menuItems = computed(() => [
     { key: 'designs', icon: () => h(PictureOutlined), label: '设计管理' },
     { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' },
   ]},
-  { type: 'group', label: collapsed.value ? '' : '商城配置', children: [
-    { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
-    ...(auth.isSuperAdmin.value ? [
+  ...(auth.isSuperAdmin.value ? [{
+    type: 'group',
+    label: collapsed.value ? '' : '商城配置',
+    children: [
+      { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
       { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
-    ] : []),
-  ]},
+    ],
+  }] : []),
   ...(auth.isSuperAdmin.value ? [{
     type: 'group',
     label: collapsed.value ? '' : '系统管理',
