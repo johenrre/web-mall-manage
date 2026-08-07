@@ -1,7 +1,7 @@
 <template>
   <div class="page-shell">
     <PageHeader title="用户管理" description="查看和维护小程序用户资料">
-      <a-input-search v-model:value="keyword" allow-clear placeholder="搜索用户名或昵称" style="width:260px" @search="search" />
+      <a-input-search v-model:value="keyword" allow-clear placeholder="搜索用户名、昵称或手机号" style="width:280px" @search="search" />
       <a-button :loading="loading" @click="load"><ReloadOutlined /> 刷新</a-button>
     </PageHeader>
 
@@ -10,6 +10,10 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'user'">
             <div class="table-user"><a-avatar :src="resolveMedia(record.avatar)">{{ (record.nickname || record.username || '用').slice(0,1) }}</a-avatar><div><b>{{ record.nickname || '未设置昵称' }}</b><div class="muted mono">@{{ record.username }}</div></div></div>
+          </template>
+          <template v-else-if="column.key === 'phone'">
+            <span v-if="record.phone" class="mono">{{ record.phone }}</span>
+            <span v-else class="muted">未授权</span>
           </template>
           <template v-else-if="column.key === 'created_at'">{{ dateTime(record.created_at) }}</template>
           <template v-else-if="column.key === 'action'">
@@ -39,7 +43,8 @@ import { dateTime, listFrom, resolveMedia, totalFrom } from '@/utils/format'
 
 const columns = [
   { title:'用户', key:'user', width:260 }, { title:'ID', dataIndex:'id', width:90 },
-  { title:'订单数', dataIndex:'order_count', width:110 }, { title:'注册时间', key:'created_at', width:180 }, { title:'操作', key:'action', width:140, fixed:'right' as const },
+  { title:'手机号', key:'phone', width:150 }, { title:'订单数', dataIndex:'order_count', width:110 },
+  { title:'注册时间', key:'created_at', width:180 }, { title:'操作', key:'action', width:140, fixed:'right' as const },
 ]
 const loading = ref(false), saving = ref(false), editOpen = ref(false)
 const users = ref<any[]>([]), keyword = ref(''), page = ref(1), pageSize = ref(20), total = ref(0)
