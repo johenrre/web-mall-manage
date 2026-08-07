@@ -6,6 +6,8 @@ export interface AdminUser {
   username: string
   nickname?: string
   role: 'admin' | 'user'
+  role_id?: number | null
+  role_name?: string
   avatar?: string
   is_builtin?: boolean
   permissions?: string[]
@@ -29,7 +31,12 @@ export function useAuth() {
   const isSuperAdmin = computed(() => state.user?.role === 'admin')
 
   function can(permission: string) {
-    return state.user?.permissions?.includes(permission) ?? isSuperAdmin.value
+    return isSuperAdmin.value || Boolean(state.user?.permissions?.includes(permission))
+  }
+
+  function firstAccessiblePage() {
+    if (isSuperAdmin.value) return 'stats'
+    return state.user?.permissions?.[0] || ''
   }
 
   async function login(username: string, password: string) {
@@ -79,5 +86,5 @@ export function useAuth() {
     state.initialized = true
   }
 
-  return { state, isAuthenticated, isSuperAdmin, can, login, verify, bootstrap, logout, clear }
+  return { state, isAuthenticated, isSuperAdmin, can, firstAccessiblePage, login, verify, bootstrap, logout, clear }
 }

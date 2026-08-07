@@ -16,7 +16,7 @@
       class="role-tip"
       type="info"
       show-icon
-      message="管理员可访问全部功能；普通账号可处理日常业务，但不能进入商城配置、系统设置和账号权限。"
+      message="超级管理员可访问全部功能；其他账号按所选角色访问业务页面，不能进入商城配置和系统管理。"
     />
 
     <a-card class="surface-card" :bordered="false">
@@ -46,8 +46,8 @@
             </div>
           </template>
           <template v-else-if="column.key === 'role'">
-            <a-tag :color="record.role === 'admin' ? 'purple' : 'blue'">
-              {{ record.role === 'admin' ? '管理员' : '普通账号' }}
+            <a-tag :color="record.role_is_super_admin || record.role === 'admin' ? 'purple' : 'blue'">
+              {{ record.role_name || (record.role === 'admin' ? '超级管理员' : '默认业务角色') }}
             </a-tag>
           </template>
           <template v-else-if="column.key === 'status'">
@@ -105,10 +105,11 @@
           <a-input-password v-model:value="createForm.password" maxlength="72" autocomplete="new-password" placeholder="至少6位" />
         </a-form-item>
         <a-form-item label="账号角色" required>
-          <a-radio-group v-model:value="createForm.role">
-            <a-radio value="user">普通账号</a-radio>
-            <a-radio value="admin">管理员</a-radio>
-          </a-radio-group>
+          <a-select v-model:value="createForm.role_id" placeholder="请选择角色">
+            <a-select-option v-for="role in assignableRoles" :key="role.id" :value="role.id">
+              {{ role.name }}
+            </a-select-option>
+          </a-select>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -126,10 +127,11 @@
           <a-input v-model:value="editForm.nickname" maxlength="40" />
         </a-form-item>
         <a-form-item label="账号角色" required>
-          <a-radio-group v-model:value="editForm.role" :disabled="editForm.locked">
-            <a-radio value="user">普通账号</a-radio>
-            <a-radio value="admin">管理员</a-radio>
-          </a-radio-group>
+          <a-select v-model:value="editForm.role_id" :disabled="editForm.locked" placeholder="请选择角色">
+            <a-select-option v-for="role in editRoleOptions" :key="role.id" :value="role.id">
+              {{ role.name }}{{ role.is_super_admin ? '（全部权限）' : '' }}
+            </a-select-option>
+          </a-select>
         </a-form-item>
         <a-form-item label="账号状态" required>
           <a-radio-group v-model:value="editForm.status" :disabled="editForm.locked">
@@ -175,8 +177,15 @@ import { errorMessage, get, post } from '@/api/http'
 import { useAuth } from '@/stores/auth'
 import { dateTime, listFrom, resolveMedia, totalFrom } from '@/utils/format'
 
-type AccountRole = 'admin' | 'user'
 type AccountStatus = 'active' | 'disabled'
+
+interface AdminRole {
+  id: number
+  name: string
+  permissions: string[]
+  is_super_admin: boolean
+  account_count: number
+}
 
 interface Account {
   id: number
@@ -184,7 +193,10 @@ interface Account {
   username: string
   nickname?: string
   avatar?: string
-  role: AccountRole
+  role: 'admin' | 'user'
+  role_id: number | null
+  role_name?: string
+  role_is_super_admin?: boolean
   status: AccountStatus
   is_builtin: boolean
   last_login_at?: string
@@ -201,6 +213,7 @@ const columns = [
   { title: '操作', key: 'action', width: 250, fixed: 'right' as const },
 ]
 const accounts = ref<Account[]>([])
+const roles = ref<AdminRole[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const keyword = ref('')
@@ -210,16 +223,18 @@ const total = ref(0)
 const createOpen = ref(false)
 const editOpen = ref(false)
 const resetOpen = ref(false)
-const createForm = reactive({ username: '', nickname: '', password: '', role: 'user' as AccountRole })
+const createForm = reactive({ username: '', nickname: '', password: '', role_id: 0 })
 const editForm = reactive({
   id: 0,
   username: '',
   nickname: '',
-  role: 'user' as AccountRole,
+  role_id: 0,
   status: 'active' as AccountStatus,
   locked: false,
 })
 const resetForm = reactive({ id: 0, name: '', password: '', confirmPassword: '' })
+const assignableRoles = computed(() => roles.value.filter((role) => !role.is_super_admin))
+const editRoleOptions = computed(() => editForm.locked ? roles.value : assignableRoles.value)
 const pagination = computed(() => ({
   current: page.value,
   pageSize: pageSize.value,
@@ -245,6 +260,11 @@ async function load() {
   }
 }
 
+async function loadRoles() {
+  const data = await get('/api/admin/roles')
+  roles.value = listFrom(data) as AdminRole[]
+}
+
 function search() {
   page.value = 1
   void load()
@@ -257,7 +277,8 @@ function onTableChange(value: { current?: number; pageSize?: number }) {
 }
 
 function openCreate() {
-  Object.assign(createForm, { username: '', nickname: '', password: '', role: 'user' })
+  const defaultRole = assignableRoles.value[0]
+  Object.assign(createForm, { username: '', nickname: '', password: '', role_id: defaultRole?.id || 0 })
   createOpen.value = true
 }
 
@@ -267,13 +288,14 @@ async function createAccount() {
   }
   if (!createForm.nickname.trim()) return message.warning('请输入账号名称')
   if (createForm.password.length < 6) return message.warning('初始密码至少6位')
+  if (!createForm.role_id) return message.warning('请选择账号角色')
   saving.value = true
   try {
     await post('/api/admin/accounts/create', {
       username: createForm.username.trim(),
       nickname: createForm.nickname.trim(),
       password: createForm.password,
-      role: createForm.role,
+      role_id: createForm.role_id,
     })
     message.success('后台账号已创建')
     createOpen.value = false
@@ -291,7 +313,7 @@ function openEdit(account: Account) {
     id: account.id,
     username: account.username,
     nickname: account.nickname || '',
-    role: account.role,
+    role_id: account.role_id,
     status: account.status,
     locked: account.is_builtin || account.user_id === auth.state.user?.id,
   })
@@ -300,12 +322,13 @@ function openEdit(account: Account) {
 
 async function saveAccount() {
   if (!editForm.nickname.trim()) return message.warning('请输入账号名称')
+  if (!editForm.role_id) return message.warning('请选择账号角色')
   saving.value = true
   try {
     await post('/api/admin/accounts/update', {
       id: editForm.id,
       nickname: editForm.nickname.trim(),
-      role: editForm.role,
+      role_id: editForm.role_id,
       status: editForm.status,
     })
     message.success('后台账号已更新')
@@ -362,7 +385,14 @@ function remove(account: Account) {
   })
 }
 
-onMounted(load)
+onMounted(async () => {
+  try {
+    await loadRoles()
+    await load()
+  } catch (error) {
+    message.error(errorMessage(error))
+  }
+})
 </script>
 
 <style scoped>

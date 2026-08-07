@@ -63,7 +63,7 @@ import {
   AppstoreOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
   DownOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   PictureOutlined, ReloadOutlined, RightOutlined, SettingOutlined, ShopOutlined, ShoppingCartOutlined,
-  SkinOutlined, SolutionOutlined, TeamOutlined, UserSwitchOutlined,
+  SafetyCertificateOutlined, SkinOutlined, SolutionOutlined, TeamOutlined, UserSwitchOutlined,
 } from '@ant-design/icons-vue'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 import { get } from '@/api/http'
@@ -80,7 +80,7 @@ const notifications = ref({ paidPendingShipCount: 0 })
 let timer: number | undefined
 
 const initials = computed(() => (auth.state.user?.nickname || auth.state.user?.username || '管').slice(0, 1).toUpperCase())
-const roleLabel = computed(() => auth.isSuperAdmin.value ? '系统管理员' : '普通账号')
+const roleLabel = computed(() => auth.state.user?.role_name || (auth.isSuperAdmin.value ? '超级管理员' : '业务账号'))
 const selectedKeys = computed(() => [String(route.name || 'stats')])
 const viewKey = computed(() => `${route.fullPath}:${refreshId.value}`)
 
@@ -88,37 +88,53 @@ function labelWithBadge(label: string, count: number) {
   return h('div', { class: 'menu-label' }, [h('span', label), count > 0 ? h('span', { class: 'menu-count' }, count > 99 ? '99+' : count) : null])
 }
 
-const menuItems = computed(() => [
-  { key: 'stats', icon: () => h(BarChartOutlined), label: '经营概览' },
-  { type: 'group', label: collapsed.value ? '' : '交易与用户', children: [
-    { key: 'orders', icon: () => h(ShoppingCartOutlined), label: labelWithBadge('订单管理', notifications.value.paidPendingShipCount) },
-    { key: 'aftersales', icon: () => h(SolutionOutlined), label: '售后管理' },
-    // 小程序第一阶段暂不展示现金卡券入口；页面与路由保留，后续可直接恢复。
-    // { key: 'coupons', icon: () => h(GiftOutlined), label: '现金卡券' },
-    { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' },
-  ]},
-  { type: 'group', label: collapsed.value ? '' : '商品与内容', children: [
-    { key: 'products', icon: () => h(ShopOutlined), label: '商品管理' },
-    { key: 'beads', icon: () => h(AppstoreOutlined), label: '盘珠管理' },
-    { key: 'designs', icon: () => h(PictureOutlined), label: '设计管理' },
-    { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' },
-  ]},
-  ...(auth.isSuperAdmin.value ? [{
-    type: 'group',
-    label: collapsed.value ? '' : '商城配置',
-    children: [
-      { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
-      { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
-    ],
-  }] : []),
-  ...(auth.isSuperAdmin.value ? [{
-    type: 'group',
-    label: collapsed.value ? '' : '系统管理',
-    children: [
-      { key: 'accounts', icon: () => h(UserSwitchOutlined), label: '账号与权限' },
-    ],
-  }] : []),
-])
+const menuItems = computed(() => {
+  const items: any[] = []
+  if (auth.can('stats')) {
+    items.push({ key: 'stats', icon: () => h(BarChartOutlined), label: '经营概览' })
+  }
+
+  const tradeItems = [
+    auth.can('orders')
+      ? { key: 'orders', icon: () => h(ShoppingCartOutlined), label: labelWithBadge('订单管理', notifications.value.paidPendingShipCount) }
+      : null,
+    auth.can('aftersales') ? { key: 'aftersales', icon: () => h(SolutionOutlined), label: '售后管理' } : null,
+    auth.can('users') ? { key: 'users', icon: () => h(TeamOutlined), label: '用户管理' } : null,
+  ].filter(Boolean)
+  if (tradeItems.length) {
+    items.push({ type: 'group', label: collapsed.value ? '' : '交易与用户', children: tradeItems })
+  }
+
+  const contentItems = [
+    auth.can('products') ? { key: 'products', icon: () => h(ShopOutlined), label: '商品管理' } : null,
+    auth.can('beads') ? { key: 'beads', icon: () => h(AppstoreOutlined), label: '盘珠管理' } : null,
+    auth.can('designs') ? { key: 'designs', icon: () => h(PictureOutlined), label: '设计管理' } : null,
+    auth.can('creators') ? { key: 'creators', icon: () => h(BgColorsOutlined), label: '设计师管理' } : null,
+  ].filter(Boolean)
+  if (contentItems.length) {
+    items.push({ type: 'group', label: collapsed.value ? '' : '商品与内容', children: contentItems })
+  }
+
+  if (auth.isSuperAdmin.value) {
+    items.push({
+      type: 'group',
+      label: collapsed.value ? '' : '商城配置',
+      children: [
+        { key: 'checkout-options', icon: () => h(SkinOutlined), label: '结算选项' },
+        { key: 'settings', icon: () => h(SettingOutlined), label: '系统设置' },
+      ],
+    })
+    items.push({
+      type: 'group',
+      label: collapsed.value ? '' : '系统管理',
+      children: [
+        { key: 'accounts', icon: () => h(UserSwitchOutlined), label: '账号与权限' },
+        { key: 'roles', icon: () => h(SafetyCertificateOutlined), label: '角色管理' },
+      ],
+    })
+  }
+  return items
+})
 
 function onMenuClick({ key }: { key: string }) {
   void router.push({ name: key })
@@ -134,6 +150,7 @@ function handleResize() {
 }
 
 async function loadNotifications() {
+  if (!auth.can('orders') && !auth.can('aftersales')) return
   try { notifications.value = await get('/api/admin/notifications_summary') } catch { /* 登录态拦截器负责处理 */ }
 }
 
