@@ -337,7 +337,7 @@
           <div class="settings-content">
             <div class="section-intro">
               <h2>用户售后与服务</h2>
-              <p>配置小程序购买须知、退款原因和售后退货地址。</p>
+              <p>配置小程序购买须知、退款售后和实时物流查询。</p>
             </div>
 
             <section class="setting-section">
@@ -372,6 +372,50 @@
                 />
                 <div class="field-help">用于用户退货时展示收件信息，请填写完整联系人、电话和地址。</div>
               </a-form-item>
+            </section>
+
+            <section class="setting-section">
+              <div class="switch-heading">
+                <div>
+                  <h3 class="setting-section-title">物流查询（快递100）</h3>
+                  <p>用于小程序“查看物流”展示实时运输轨迹。</p>
+                </div>
+                <a-switch v-model:checked="form.kuaidi100_enabled" checked-children="启用" un-checked-children="停用" />
+              </div>
+              <div class="form-grid">
+                <a-form-item label="授权 Key">
+                  <a-input-password
+                    v-model:value="form.kuaidi100_key"
+                    name="kuaidi100-key"
+                    autocomplete="new-password"
+                    placeholder="快递100企业管理后台的授权 Key"
+                  />
+                </a-form-item>
+                <a-form-item label="Customer">
+                  <a-input-password
+                    v-model:value="form.kuaidi100_customer"
+                    name="kuaidi100-customer"
+                    autocomplete="new-password"
+                    placeholder="快递100企业管理后台的 Customer"
+                  />
+                </a-form-item>
+                <a-form-item label="查询缓存时间">
+                  <a-input-number
+                    v-model:value="form.kuaidi100_cache_minutes"
+                    :min="30"
+                    :max="1440"
+                    :precision="0"
+                    addon-after="分钟"
+                    style="width: 100%"
+                  />
+                  <div class="field-help">同一运单至少间隔 30 分钟查询，避免重复消耗查询次数。</div>
+                </a-form-item>
+              </div>
+              <a-alert
+                type="info"
+                show-icon
+                message="这里只需要授权 Key 和 Customer，不需要保存快递100登录账号或密码。顺丰、中通等查询时还会校验订单收件手机号。"
+              />
             </section>
           </div>
         </a-tab-pane>
@@ -564,6 +608,8 @@ const trayColumns = [
 const stringKeys = [
   'points_rule_text',
   'refund_return_address',
+  'kuaidi100_key',
+  'kuaidi100_customer',
   'miniprogram_app_id',
   'miniprogram_app_secret',
   'miniprogram_name',
@@ -588,7 +634,7 @@ const stringKeys = [
   'wxpay_notify_url',
   'wxpay_refund_notify_url',
 ]
-const boolKeys = ['miniprogram_enabled', 'wxpay_enabled']
+const boolKeys = ['miniprogram_enabled', 'wxpay_enabled', 'kuaidi100_enabled']
 
 const storageAlertType = computed(() => {
   if (!storageStatus.value) return 'info'
@@ -765,6 +811,7 @@ async function load() {
     Object.assign(form, data)
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
     for (const key of boolKeys) form[key] = boolValue(data[key])
+    form.kuaidi100_cache_minutes = Number(data.kuaidi100_cache_minutes || 30)
     slides.value = parseSlides(data.miniprogram_home_slides_json)
     trayImages.value = parseTrayImages(data.miniprogram_diy_tray_images_json)
     try {
@@ -916,6 +963,10 @@ async function save() {
   if (homeMusicUrl && !/^https:\/\//i.test(homeMusicUrl)) {
     return message.warning('首页背景音乐必须使用 HTTPS 地址')
   }
+  const kuaidi100CacheMinutes = Number(form.kuaidi100_cache_minutes)
+  if (!Number.isInteger(kuaidi100CacheMinutes) || kuaidi100CacheMinutes < 30 || kuaidi100CacheMinutes > 1440) {
+    return message.warning('快递100查询缓存时间必须是 30 至 1440 分钟的整数')
+  }
   const payload: Record<string, unknown> = {
     contact_service_json: serializeContact(),
     miniprogram_home_slides_json: serializeSlides(),
@@ -923,6 +974,7 @@ async function save() {
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
     miniprogram_diy_tray_images_json: serializeTrayImages(),
     miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
+    kuaidi100_cache_minutes: kuaidi100CacheMinutes,
   }
   for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
   for (const key of boolKeys) payload[key] = Boolean(form[key])
