@@ -14,6 +14,7 @@ export interface DesignSequenceItem extends Record<string, unknown> {
   id: string
   name: string
   image: string
+  size: number
   index: number
 }
 
@@ -93,6 +94,7 @@ export function designSequence(
       index,
       name: String(material.name ?? '已删除的珠材'),
       image: String(material.image ?? material.imageUrl ?? ''),
+      size: Number(material.size ?? material.mm ?? 0),
     }
   })
 }
