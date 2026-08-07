@@ -83,8 +83,8 @@
 
           <template v-else-if="column.key==='commerce'">
             <div class="commerce-cell">
-              <div><b>{{ materialLabels[record.type]||record.type||'未设置' }}</b><span>{{ formatNumber(record.size) }} mm</span></div>
-              <strong>{{ money(record.price) }}</strong>
+              <div><b>{{ materialLabels[record.type]||record.type||'未设置' }}</b><span>{{ variantSizeText(record) }}</span></div>
+              <strong>{{ priceRangeText(record) }}</strong>
               <small>素材排序 {{ record.category_sort_order ?? 100 }}</small>
             </div>
           </template>
@@ -95,7 +95,7 @@
                 <a-tag :color="record.stringing_position==='top'?'blue':'default'" :bordered="false">{{ record.stringing_position==='top'?'顶部穿线':'中心穿线' }}</a-tag>
                 <a-tag v-if="booleanValue(record.is_irregular)" color="orange" :bordered="false">异形</a-tag>
               </div>
-              <div><span>占位宽度</span><b>{{ positiveNumber(record.stringing_width_mm) ? `${formatNumber(record.stringing_width_mm)} mm` : `${formatNumber(record.size)} mm（沿用尺寸）` }}</b></div>
+              <div><span>占位宽度</span><b>{{ positiveNumber(record.stringing_width_mm) ? `${formatNumber(record.stringing_width_mm)} mm` : '跟随所选尺寸' }}</b></div>
               <div><span>穿线偏移</span><b>{{ signedNumber(record.stringing_offset_mm) }} mm</b></div>
             </div>
           </template>
@@ -141,7 +141,7 @@
           <div class="editor-identity">
             <small>{{ form.id ? `珠材 ID ${form.id}` : '新建珠材' }}</small>
             <b>{{ form.name||'未命名珠材' }}</b>
-            <span>{{ form.category||'未分类' }} · {{ formatNumber(form.size) }} mm · {{ money(form.price) }}</span>
+            <span>{{ form.category||'未分类' }} · {{ variantSizeText(form) }} · {{ priceRangeText(form) }}</span>
           </div>
           <div class="editor-badges">
             <a-tag v-if="form.is_irregular" color="orange" :bordered="false">异形</a-tag>
@@ -164,8 +164,21 @@
                   <a-input v-else :value="isAccessory?form.subcategory:form.color_family" @update:value="subChanged" />
                 </a-form-item>
                 <a-form-item label="材质类型" name="type"><a-select v-model:value="form.type" :options="materialOptions" /></a-form-item>
-                <a-form-item label="珠子尺寸（mm）" name="size"><a-input-number v-model:value="form.size" :min="0.1" :step="0.1" style="width:100%" /></a-form-item>
-                <a-form-item label="销售价格" name="price"><a-input-number v-model:value="form.price" :min="0" :precision="2" prefix="¥" style="width:100%" /></a-form-item>
+                <a-form-item label="异形材质">
+                  <div class="switch-row"><a-switch v-model:checked="form.is_irregular" checked-children="是" un-checked-children="否" @change="handleIrregularChange" /><span>{{ form.is_irregular?'异形材质仅允许一个尺寸':'普通珠材可设置多个尺寸' }}</span></div>
+                </a-form-item>
+                <div class="span-2 variant-editor">
+                  <div class="variant-editor__head">
+                    <div><b>尺寸与价格</b><span>{{ form.is_irregular?'异形材质只维护一条规格':'一个珠材可维护多个尺寸，无需重复上传图片' }}</span></div>
+                    <a-button v-if="!form.is_irregular" size="small" @click="addVariant"><PlusOutlined /> 添加尺寸</a-button>
+                  </div>
+                  <div class="variant-editor__columns"><span>尺寸（mm）</span><span>销售价格</span><span></span></div>
+                  <div v-for="(variant,index) in form.variants" :key="variant.id||`new_${index}`" class="variant-row">
+                    <a-input-number v-model:value="variant.size" :min="0.1" :step="0.1" style="width:100%" />
+                    <a-input-number v-model:value="variant.price" :min="0" :precision="2" prefix="¥" style="width:100%" />
+                    <a-button v-if="!form.is_irregular&&form.variants.length>1" type="text" danger aria-label="删除尺寸" @click="removeVariant(index)"><DeleteOutlined /></a-button>
+                  </div>
+                </div>
                 <a-form-item class="span-2" label="珠材描述"><a-textarea v-model:value="form.description" :rows="4" maxlength="500" show-count placeholder="补充材质、工艺或搭配建议" /></a-form-item>
               </div>
             </section>
@@ -213,11 +226,8 @@
               </div>
             </section>
             <section class="editor-section">
-              <div class="section-heading"><div><b>形态与层级</b><span>异形素材默认使用更高渲染层级</span></div></div>
+              <div class="section-heading"><div><b>渲染层级</b><span>异形素材默认使用更高渲染层级</span></div></div>
               <div class="form-grid">
-                <a-form-item label="异形材质">
-                  <div class="switch-row"><a-switch v-model:checked="form.is_irregular" checked-children="是" un-checked-children="否" /><span>{{ form.is_irregular?'默认层级为 25':'默认层级为 20' }}</span></div>
-                </a-form-item>
                 <a-form-item label="渲染层级">
                   <a-input-number v-model:value="form.layer" :step="1" placeholder="留空时自动计算" style="width:100%" />
                   <div class="field-help">拖动中的材质仍由小程序临时置顶。</div>
@@ -310,6 +320,7 @@ import { errorMessage,get,post } from '@/api/http'
 import { listFrom,money,resolveMedia } from '@/utils/format'
 
 interface Category { id:string; label:string }
+interface BeadVariantForm { id:number|null; size:number; price:number }
 type RenderFilter = ''|'irregular'|'top'|'canvas'|'issues'
 
 const defaults:Category[]=[{id:'crystal',label:'水晶'},{id:'chxiang',label:'沉香'},{id:'puti',label:'菩提'},{id:'wenwan',label:'文玩'},{id:'peishi',label:'配饰'}]
@@ -321,13 +332,13 @@ const materialLabels:Record<string,string>={wood:'木质',stone:'石质',glass:'
 const materialOptions=Object.entries(materialLabels).map(([value,label])=>({value,label}))
 const stringingPositionOptions=[{label:'中心穿线',value:'center'},{label:'顶部穿线',value:'top'}]
 const renderFilterOptions=[{label:'全部渲染状态',value:''},{label:'异形材质',value:'irregular'},{label:'顶部穿线',value:'top'},{label:'已配置独立 Canvas 图',value:'canvas'},{label:'资料待完善',value:'issues'}]
-const emptyForm=()=>({id:0,name:'',name_en:'',name_zh_tw:'',category:'水晶',subcategory:'',category_sort_order:100,color_family:'',type:'stone',size:8,price:0,image:'',canvas_image:'',stringing_width_mm:null as number|null,stringing_position:'center' as 'center'|'top',stringing_offset_mm:0,image_scale:1,is_irregular:false,layer:null as number|null,description:''})
+const emptyForm=()=>({id:'',name:'',name_en:'',name_zh_tw:'',category:'水晶',subcategory:'',category_sort_order:100,color_family:'',type:'stone',variants:[{id:null,size:8,price:0}] as BeadVariantForm[],image:'',canvas_image:'',stringing_width_mm:null as number|null,stringing_position:'center' as 'center'|'top',stringing_offset_mm:0,image_scale:1,is_irregular:false,layer:null as number|null,description:''})
 const form=reactive(emptyForm())
-const rules={name:[{required:true,message:'请输入中文名称'}],category:[{required:true,message:'请选择主分类'}],type:[{required:true,message:'请选择材质'}],size:[{required:true,message:'请输入尺寸'}],price:[{required:true,message:'请输入价格'}]}
+const rules={name:[{required:true,message:'请输入中文名称'}],category:[{required:true,message:'请选择主分类'}],type:[{required:true,message:'请选择材质'}]}
 const columns=[
   {title:'珠材信息',key:'bead',width:250},
   {title:'分类',key:'category',width:130},
-  {title:'商品规格',key:'commerce',width:130,sorter:(a:any,b:any)=>Number(a.size)-Number(b.size)},
+  {title:'商品规格',key:'commerce',width:180,sorter:(a:any,b:any)=>primarySize(a)-primarySize(b)},
   {title:'穿线参数',key:'stringing',width:210},
   {title:'渲染素材',key:'render',width:210},
   {title:'操作',key:'action',width:90,fixed:'right' as const},
@@ -338,7 +349,7 @@ const isAccessory=computed(()=>selectedCategory.value?.id==='peishi'||form.categ
 const currentSubcategories=computed(()=>subcategories.value[selectedCategory.value?.id||'']||[])
 const currentConfigSubs=computed(()=>subcategories.value[activeSubId.value]||(subcategories.value[activeSubId.value]=[]))
 const hasActiveFilters=computed(()=>Boolean(keyword.value.trim()||activeCategory.value||subcategoryFilter.value||materialFilter.value||renderFilter.value))
-const effectiveStringingWidth=computed(()=>formatNumber(positiveNumber(form.stringing_width_mm)||form.size))
+const effectiveStringingWidth=computed(()=>formatNumber(positiveNumber(form.stringing_width_mm)||primarySize(form)))
 const effectiveLayer=computed(()=>form.layer===null||form.layer===undefined ? (form.is_irregular?25:20) : formatNumber(form.layer))
 
 const overview=computed(()=>({
@@ -372,6 +383,10 @@ function finiteNumber(value:unknown,fallback:number){const number=Number(value);
 function positiveNumber(value:unknown){const number=finiteNumber(value,0);return number>0?number:null}
 function booleanValue(value:unknown){return value===true||value===1||String(value).toLowerCase()==='true'}
 function formatNumber(value:unknown){return Number(finiteNumber(value,0).toFixed(2)).toString()}
+function variantsOf(value:any):BeadVariantForm[]{return Array.isArray(value?.variants)?value.variants:[]}
+function primarySize(value:any){return finiteNumber(variantsOf(value)[0]?.size,0)}
+function variantSizeText(value:any){const sizes=variantsOf(value).map(item=>finiteNumber(item.size,0)).filter(size=>size>0).sort((a,b)=>a-b);return sizes.length?`${sizes.map(formatNumber).join(' / ')} mm`:'未设置尺寸'}
+function priceRangeText(value:any){const prices=variantsOf(value).map(item=>Math.max(0,finiteNumber(item.price,0))).sort((a,b)=>a-b);if(!prices.length)return money(0);return prices[0]===prices[prices.length-1]?money(prices[0]):`${money(prices[0])}～${money(prices[prices.length-1])}`}
 function signedNumber(value:unknown){const number=finiteNumber(value,0);return number>0?`+${formatNumber(number)}`:formatNumber(number)}
 function layerText(row:any){const explicit=Number(row.layer);return row.layer!==null&&row.layer!==undefined&&row.layer!==''&&Number.isFinite(explicit)?String(explicit):`${booleanValue(row.is_irregular)?25:20} 自动`}
 function hasDataIssue(item:any){return !String(item.image||'').trim()||(item.stringing_position==='top'&&!positiveNumber(item.stringing_width_mm))}
@@ -403,15 +418,20 @@ async function load(){
 }
 
 function openCreate(){Object.assign(form,emptyForm());form.category=categories.value[0]?.label||'';categoryChanged();editorTab.value='base';editorOpen.value=true}
-function openEdit(row:any){Object.assign(form,emptyForm(),row,{canvas_image:String(row.canvas_image||''),stringing_width_mm:positiveNumber(row.stringing_width_mm),stringing_position:row.stringing_position==='top'?'top':'center',stringing_offset_mm:finiteNumber(row.stringing_offset_mm,0),image_scale:positiveNumber(row.image_scale)||1,is_irregular:booleanValue(row.is_irregular),layer:row.layer===null||row.layer===undefined||row.layer===''?null:finiteNumber(row.layer,0)});editorTab.value='base';editorOpen.value=true}
+function openEdit(row:any){Object.assign(form,emptyForm(),row,{id:String(row.id||row.group_id||''),variants:variantsOf(row).map(item=>({id:Number(item.id)||null,size:finiteNumber(item.size,0),price:Math.max(0,finiteNumber(item.price,0))})),canvas_image:String(row.canvas_image||''),stringing_width_mm:positiveNumber(row.stringing_width_mm),stringing_position:row.stringing_position==='top'?'top':'center',stringing_offset_mm:finiteNumber(row.stringing_offset_mm,0),image_scale:positiveNumber(row.image_scale)||1,is_irregular:booleanValue(row.is_irregular),layer:row.layer===null||row.layer===undefined||row.layer===''?null:finiteNumber(row.layer,0)});editorTab.value='base';editorOpen.value=true}
 function categoryChanged(){form.subcategory='';form.color_family='';const first=currentSubcategories.value[0]?.label||'';if(isAccessory.value)form.subcategory=first;else form.color_family=first}
 function subChanged(value:string){if(isAccessory.value)form.subcategory=value;else form.color_family=value}
+function addVariant(){const last=form.variants[form.variants.length-1];form.variants.push({id:null,size:Number(((last?.size||8)+2).toFixed(1)),price:last?.price||0})}
+function removeVariant(index:number){if(form.variants.length<=1)return;form.variants.splice(index,1)}
+function handleIrregularChange(checked:boolean){if(!checked)return;if(form.variants.length>1){form.is_irregular=false;message.warning('异形材质只能设置一个尺寸，请先删除多余尺寸')}}
+function validateVariants(){if(!form.variants.length)return '至少需要一个尺寸规格';if(form.is_irregular&&form.variants.length!==1)return '异形材质只能设置一个尺寸';const sizes=new Set<string>();for(const variant of form.variants){const size=Number(variant.size),price=Number(variant.price);if(!Number.isFinite(size)||size<=0)return '珠子尺寸必须大于 0';if(!Number.isFinite(price)||price<0)return '销售价格不能小于 0';const key=String(Number(size.toFixed(3)));if(sizes.has(key))return `尺寸 ${key}mm 重复`;sizes.add(key)}return ''}
 
 async function save(){
   try{
     await formRef.value?.validate()
     if(isAccessory.value&&!form.subcategory){editorTab.value='base';return message.warning('请选择配饰子分类')}
     if(!isAccessory.value&&!form.color_family){editorTab.value='base';return message.warning('请选择色系')}
+    const variantError=validateVariants();if(variantError){editorTab.value='base';return message.warning(variantError)}
     saving.value=true
     await post(form.id?'/api/bead/update':'/api/bead/create',{...form})
     message.success(form.id?'珠材已更新':'珠材已创建')
@@ -446,6 +466,7 @@ onMounted(load)
 .catalog-table-card{overflow:hidden;border-radius:16px!important}.catalog-table-card :deep(.ant-card-body){padding:0}.catalog-table-card :deep(.ant-table-thead>tr>th){padding:14px 16px;color:#6b7d76;background:#f8faf9;font-size:12px;font-weight:650}.catalog-table-card :deep(.ant-table-tbody>tr>td){padding:14px 16px;border-bottom-color:#edf1ef}.catalog-table-card :deep(.ant-table-tbody>tr:hover>td){background:#f8fbfa!important}.catalog-table-card :deep(.ant-table-tbody>tr.data-issue-row>td:first-child){box-shadow:inset 3px 0 #d99b56}.catalog-table-card :deep(.ant-pagination){margin:18px 20px}
 .material-cell{display:flex;align-items:center;gap:12px}.material-thumb-wrap{position:relative;flex:0 0 54px}.bead-image,:deep(.bead-image img){border:1px solid #e7ecea;border-radius:14px;object-fit:contain;background:#f5f7f6}.empty-thumb{display:grid;place-items:center;width:54px;height:54px;border:1px dashed #d7e0dc;border-radius:14px;color:#a5b0ac;background:#f5f7f6;font-size:18px}.issue-dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border:2px solid #fff;border-radius:50%;background:#dd9650}.material-copy{min-width:0}.material-name{overflow:hidden;color:#263f37;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.material-en{overflow:hidden;margin-top:3px;color:#87948f;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.material-id{margin-top:4px;color:#adb6b2;font-family:Consolas,monospace;font-size:10px}.category-cell{display:flex;align-items:flex-start;flex-direction:column;gap:6px}.category-cell span{color:#7e8d87;font-size:11px}.commerce-cell{display:flex;flex-direction:column;gap:5px}.commerce-cell>div{display:flex;align-items:center;gap:7px}.commerce-cell>div span{color:#83918c;font-size:11px}.commerce-cell strong{color:#a86e29;font-size:14px}.commerce-cell small{color:#a2aca8}.config-cell{display:flex;flex-direction:column;gap:7px}.config-tags{display:flex;gap:4px}.config-cell>div:not(.config-tags){display:flex;justify-content:space-between;gap:10px;font-size:11px}.config-cell>div span{color:#98a49f}.config-cell>div b{color:#53665f;font-weight:550;text-align:right}.render-cell{display:flex;flex-direction:column;gap:8px}.render-image-status{display:flex;align-items:center;gap:8px}.canvas-image,:deep(.canvas-image img){border-radius:9px;object-fit:contain;background:#f4f6f5}.fallback-canvas{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;color:#8ea09a;background:#eef3f1}.render-image-status>div{display:flex;min-width:0;flex-direction:column}.render-image-status b{color:#4c6159;font-size:11px}.render-image-status small{margin-top:2px;color:#a0aaa6;font-size:9px}.render-meta{display:flex;gap:6px}.render-meta span{padding:3px 6px;border-radius:6px;color:#75857f;background:#f3f6f5;font-size:9px}.row-actions{display:flex;align-items:center;justify-content:flex-end;gap:2px}.edit-button{color:#246b57}
 .editor-hero{display:flex;align-items:center;gap:14px;margin:-8px 0 6px;padding:14px;border:1px solid #e4ece8;border-radius:14px;background:linear-gradient(135deg,#f7faf9,#eef5f2)}.editor-image,:deep(.editor-image img){flex:0 0 72px;border:1px solid #dfe8e4;border-radius:16px;object-fit:contain;background:#fff}.editor-image.empty{display:grid;place-items:center;color:#9caaa5;font-size:22px}.editor-identity{display:flex;min-width:0;flex:1;flex-direction:column}.editor-identity small{color:#94a19c;font-size:10px}.editor-identity b{overflow:hidden;margin:3px 0;color:#21473c;font-size:18px;text-overflow:ellipsis;white-space:nowrap}.editor-identity span{color:#72847d;font-size:12px}.editor-badges{display:flex;align-items:flex-end;flex-direction:column;gap:5px}.editor-tabs :deep(.ant-tabs-nav){margin-bottom:16px}.editor-tabs :deep(.ant-tabs-tab){padding:13px 4px}.editor-section{margin-bottom:14px;padding:16px;border:1px solid #e6ece9;border-radius:14px;background:#fff}.section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.section-heading>div{display:flex;flex-direction:column}.section-heading b{color:#294b40;font-size:14px}.section-heading span{margin-top:3px;color:#94a09b;font-size:11px}.editor-section :deep(.ant-form-item:last-child){margin-bottom:0}.media-explainer{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:11px 12px;border-radius:10px;color:#497063;background:#eef5f2}.media-explainer>span{display:flex;flex-direction:column}.media-explainer b{font-size:12px}.media-explainer small{margin-top:2px;color:#71877f;font-size:11px;line-height:1.5}.image-actions{display:flex;justify-content:flex-end;margin-top:5px}.render-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.render-summary>div{display:flex;flex-direction:column;padding:13px;border-radius:12px;background:#eef5f2}.render-summary small{color:#7c8d86;font-size:10px}.render-summary b{margin:3px 0;color:#245747;font-size:18px}.render-summary span{color:#98a49f;font-size:9px}.field-help{margin-top:6px;color:#89958f;font-size:11px;line-height:1.55}.switch-row{display:flex;align-items:center;gap:10px;height:32px}.switch-row span{color:#7f8f89;font-size:11px}.drawer-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}.drawer-footer>span{color:#919e99;font-size:11px}.drawer-footer>div{display:flex;gap:8px}
+.variant-editor{margin-bottom:22px;padding:14px;border:1px solid #e5ece9;border-radius:12px;background:#fafcfb}.variant-editor__head{display:flex;align-items:center;justify-content:space-between;gap:16px}.variant-editor__head>div{display:flex;min-width:0;flex-direction:column}.variant-editor__head b{color:#35584d;font-size:13px}.variant-editor__head span{margin-top:3px;color:#8d9a95;font-size:11px}.variant-editor__columns,.variant-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px;align-items:center;gap:10px}.variant-editor__columns{margin-top:14px;padding:0 2px 6px;color:#99a49f;font-size:10px}.variant-row{padding:9px 0;border-top:1px solid #edf1ef}.variant-row>:deep(.ant-btn){display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;padding:0}
 .config-intro{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;border-radius:11px;color:#3e695d;background:#edf5f2}.config-intro>span{display:flex;flex-direction:column}.config-intro b{font-size:12px}.config-intro small{margin-top:2px;color:#7f918a;font-size:10px}.config-column-head{display:grid;grid-template-columns:56px 1.2fr 1fr 118px;gap:8px;padding:0 8px 7px;color:#9aa6a1;font-size:9px}.config-column-head span:last-child{text-align:center}.category-editor{display:flex;flex-direction:column;gap:8px;max-height:430px;padding:2px;overflow:auto}.category-row{display:grid;grid-template-columns:48px 1.2fr 1fr 34px 34px 34px;align-items:center;gap:8px;padding:8px;border:1px solid #e8eeeb;border-radius:11px;background:#fff;transition:.15s ease}.category-row:hover{border-color:#c9ddd6;background:#fbfdfc}.category-row.dragging{opacity:.48;border-color:#7aa898}.category-row>:deep(.ant-btn){display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;padding:0;line-height:1}.category-row>:deep(.ant-btn .anticon){display:inline-flex;align-items:center;justify-content:center;margin:0;line-height:1}.sort-handle{display:flex;align-items:center;justify-content:center;gap:5px;color:#9ba7a2;cursor:grab}.sort-handle b{color:#53736a;font:10px Consolas,monospace}.config-field{display:flex;min-width:0;flex-direction:column}.config-field small{margin-top:3px;color:#9aa6a1;font-size:9px}.config-actions{display:flex;justify-content:space-between;margin-top:18px}.subcategory-tip{display:flex;align-items:baseline;gap:8px;margin:14px 2px 9px}.subcategory-tip b{color:#35594e;font-size:11px}.subcategory-tip span{color:#96a29d;font-size:9px}.sub-editor{margin-top:0}
 @media(max-width:1180px){.catalog-stats{grid-template-columns:repeat(3,1fr)}.catalog-stats button:nth-child(4),.catalog-stats button:nth-child(5){display:none}.filter-main{flex-wrap:wrap}.keyword-input{flex:1 1 260px}.filter-select{flex:1 1 140px}}
 @media(max-width:760px){.catalog-stats{grid-template-columns:repeat(2,1fr)}.catalog-stats button:nth-child(3){display:none}.filter-main{align-items:stretch;flex-direction:column}.keyword-input,.filter-select{width:100%}.render-summary{grid-template-columns:1fr}.editor-hero{align-items:flex-start}.editor-badges{display:none}.drawer-footer>span{display:none}.drawer-footer{justify-content:flex-end}.category-row{grid-template-columns:20px 1fr 1fr 32px}.category-row button:nth-last-child(2),.category-row button:nth-last-child(3){display:none}}
