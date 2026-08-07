@@ -11,20 +11,26 @@
           <span class="metric-icon" :style="{ color: card.color, background: card.background }">
             <component :is="card.icon" />
           </span>
-          <svg class="sparkline" viewBox="0 0 150 58" preserveAspectRatio="none" aria-hidden="true">
-            <polyline
-              :points="sparklinePoints(card.trend)"
-              fill="none"
-              :stroke="card.color"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="3"
-            />
-          </svg>
+          <div class="metric-trend">
+            <span>近 7 日趋势</span>
+            <svg class="sparkline" viewBox="0 0 150 58" preserveAspectRatio="none" aria-hidden="true">
+              <polyline
+                :points="sparklinePoints(card.trend)"
+                fill="none"
+                :stroke="card.color"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="3"
+              />
+            </svg>
+          </div>
         </div>
         <span class="metric-label">{{ card.title }}</span>
         <strong class="metric-value">{{ card.value }}</strong>
-        <span class="metric-note">{{ card.note }}</span>
+        <div class="metric-yesterday">
+          <span>昨日</span>
+          <strong>{{ card.yesterdayValue }}</strong>
+        </div>
         <div class="metric-change" :class="card.change.tone">
           <ArrowUpOutlined v-if="card.change.tone === 'up'" />
           <ArrowDownOutlined v-else-if="card.change.tone === 'down'" />
@@ -228,6 +234,14 @@ interface DailyTrend {
   conversion_rate: number
 }
 
+interface YesterdayStats {
+  sales: number
+  orders: number
+  paid_orders: number
+  new_users: number
+  conversion_rate: number
+}
+
 interface DashboardStats {
   total_sales: number
   user_count: number
@@ -238,6 +252,7 @@ interface DashboardStats {
   status_counts: Record<string, number>
   hot_beads: Array<{ id: string; name: string; image: string; count: number }>
   monthly: MonthlyStats
+  yesterday: YesterdayStats
   pending: {
     paid_pending_ship: number
     refund_review: number
@@ -283,6 +298,13 @@ const emptyStats: DashboardStats = {
   status_counts: {},
   hot_beads: [],
   monthly: emptyMonthly,
+  yesterday: {
+    sales: 0,
+    orders: 0,
+    paid_orders: 0,
+    new_users: 0,
+    conversion_rate: 0,
+  },
   pending: {
     paid_pending_ship: 0,
     refund_review: 0,
@@ -313,14 +335,14 @@ type ChangeTone = 'up' | 'down' | 'neutral'
 
 function changeOf(value: number | null, unit = '%') {
   if (value === null || !Number.isFinite(Number(value))) {
-    return { tone: 'neutral' as ChangeTone, text: '暂无上月对比', shortText: '暂无对比' }
+    return { tone: 'neutral' as ChangeTone, text: '暂无上月同期对比', shortText: '暂无对比' }
   }
   const number = Number(value)
   const tone: ChangeTone = number > 0 ? 'up' : number < 0 ? 'down' : 'neutral'
   const numberText = `${Math.abs(number).toFixed(1)}${unit}`
   return {
     tone,
-    text: number === 0 ? '与上月持平' : `${numberText} 较上月`,
+    text: number === 0 ? '与上月同期持平' : `${numberText} 较上月同期`,
     shortText: number === 0 ? '持平' : numberText,
   }
 }
@@ -328,9 +350,9 @@ function changeOf(value: number | null, unit = '%') {
 const cards = computed(() => [
   {
     key: 'users',
-    title: '总用户数',
-    value: stats.value.user_count.toLocaleString(),
-    note: `本月新增 ${stats.value.monthly.new_users} 人`,
+    title: '本月新增用户',
+    value: `${stats.value.monthly.new_users.toLocaleString()} 人`,
+    yesterdayValue: `${stats.value.yesterday.new_users.toLocaleString()} 人`,
     color: '#4477c8',
     background: '#eaf2ff',
     icon: UserOutlined,
@@ -339,9 +361,9 @@ const cards = computed(() => [
   },
   {
     key: 'sales',
-    title: '累计销售额',
-    value: money(stats.value.total_sales),
-    note: `本月 ${money(stats.value.monthly.sales)}`,
+    title: '本月销售额',
+    value: money(stats.value.monthly.sales),
+    yesterdayValue: money(stats.value.yesterday.sales),
     color: '#319b7a',
     background: '#e7f7f1',
     icon: FundOutlined,
@@ -350,9 +372,9 @@ const cards = computed(() => [
   },
   {
     key: 'orders',
-    title: '订单总数',
-    value: stats.value.order_count.toLocaleString(),
-    note: `待发货 ${stats.value.pending.paid_pending_ship} 笔`,
+    title: '本月订单总数',
+    value: `${stats.value.monthly.orders.toLocaleString()} 笔`,
+    yesterdayValue: `${stats.value.yesterday.orders.toLocaleString()} 笔`,
     color: '#d1833f',
     background: '#fff1e5',
     icon: ShoppingCartOutlined,
@@ -361,9 +383,9 @@ const cards = computed(() => [
   },
   {
     key: 'conversion',
-    title: '支付转化率',
-    value: `${Number(stats.value.conversion_rate).toFixed(1)}%`,
-    note: `累计支付 ${stats.value.paid_order_count} 笔`,
+    title: '本月支付转化率',
+    value: `${Number(stats.value.monthly.conversion_rate).toFixed(1)}%`,
+    yesterdayValue: `${Number(stats.value.yesterday.conversion_rate).toFixed(1)}%`,
     color: '#9565c7',
     background: '#f2ebfb',
     icon: RiseOutlined,
@@ -465,7 +487,7 @@ onMounted(load)
 
 <style scoped>
 .overview-page{--dash-ink:#1f332d;--dash-muted:#85918d;--dash-line:#e8eeeb}
-.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.metric-card{position:relative;min-height:220px;overflow:hidden;padding:22px;border-radius:18px;background:#fff}.metric-card__top{display:flex;align-items:flex-start;justify-content:space-between;height:58px}.metric-icon{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:13px;font-size:20px}.sparkline{width:42%;height:52px;opacity:.48}.metric-label{display:block;margin-top:8px;color:#74827d;font-size:13px}.metric-value{display:block;margin-top:7px;color:#172923;font:750 29px/1.08 Georgia,'Noto Serif SC',serif;letter-spacing:-.02em}.metric-note{display:block;margin-top:8px;color:#94a09b;font-size:11px}.metric-change{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:650}.metric-change.up{color:#339879}.metric-change.down{color:#cf665d}.metric-change.neutral{color:#9aa5a0}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.metric-card{position:relative;min-height:232px;overflow:hidden;padding:22px;border-radius:18px;background:#fff}.metric-card__top{display:flex;align-items:flex-start;justify-content:space-between;height:60px}.metric-icon{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:13px;font-size:20px}.metric-trend{display:flex;width:46%;min-width:88px;flex-direction:column;align-items:flex-end;gap:1px}.metric-trend>span{color:#a2aca8;font-size:10px;line-height:1}.sparkline{width:100%;height:44px;opacity:.48}.metric-label{display:block;margin-top:8px;color:#74827d;font-size:13px}.metric-value{display:block;margin-top:7px;color:#172923;font:750 29px/1.08 Georgia,'Noto Serif SC',serif;letter-spacing:-.02em}.metric-yesterday{display:flex;align-items:center;justify-content:space-between;margin-top:13px;padding-top:10px;border-top:1px solid #eef1ef;color:#8d9994;font-size:11px}.metric-yesterday strong{color:#53645e;font-size:12px;font-weight:700}.metric-change{display:flex;align-items:center;gap:5px;margin-top:9px;font-size:11px;font-weight:650}.metric-change.up{color:#339879}.metric-change.down{color:#cf665d}.metric-change.neutral{color:#9aa5a0}
 .workbench-grid{display:grid;grid-template-columns:minmax(340px,1.08fr) minmax(330px,.94fr) minmax(320px,.98fr);gap:16px}.dashboard-panel{padding:22px;border-radius:18px;background:#fff}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px}.panel-head small{color:#9aa49f;font-size:10px;letter-spacing:.08em}.panel-head h2{margin:3px 0 0;color:var(--dash-ink);font-size:18px}.panel-head>svg{color:#81908a;font-size:18px}.panel-total{display:grid;place-items:center;min-width:32px;height:28px;padding:0 9px;border-radius:10px;color:#5c6d66;background:#f1f5f3;font-size:12px;font-weight:700}
 .performance-card{position:relative;overflow:hidden;min-height:330px;padding:24px;border-radius:20px;color:#fff;background:linear-gradient(145deg,#173a31,#102a24);box-shadow:0 18px 40px rgba(18,54,45,.18)}.performance-card:before{position:absolute;inset:0;content:'';opacity:.16;background-image:radial-gradient(rgba(255,255,255,.65) .7px,transparent .7px);background-size:16px 16px}.performance-glow{position:absolute;right:-70px;top:-70px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(214,190,127,.25),transparent 65%)}.performance-card>*:not(.performance-glow){position:relative}.performance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.performance-title{display:flex;align-items:center;gap:13px}.performance-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;color:#eadbb1;background:rgba(255,255,255,.1);font-size:23px}.performance-title div{display:flex;flex-direction:column}.performance-title small{color:rgba(255,255,255,.55);font-size:11px}.performance-title strong{margin-top:4px;color:#fff;font:750 30px Georgia,'Noto Serif SC',serif}.performance-change{display:flex;align-items:center;gap:5px;padding:8px 10px;border-radius:10px;font-size:12px;font-weight:700}.performance-change.up{color:#aee4cf;background:rgba(52,151,115,.2)}.performance-change.down{color:#ffd0cb;background:rgba(198,87,80,.2)}.performance-change.neutral{color:#d6ddd9;background:rgba(255,255,255,.08)}.performance-card>p{max-width:420px;margin:20px 0;color:rgba(255,255,255,.56);font-size:12px;line-height:1.8}.performance-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.performance-metrics>div{display:flex;flex-direction:column;align-items:center;padding:14px 8px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.055)}.performance-metrics small{color:rgba(255,255,255,.48);font-size:10px}.performance-metrics strong{margin-top:5px;color:#fff;font-size:19px}.performance-action{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:14px;padding:11px;border:1px solid rgba(255,255,255,.09);border-radius:11px;color:#eef5f2;background:rgba(255,255,255,.09);cursor:pointer}.performance-action:hover{background:rgba(255,255,255,.14)}
 .quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.quick-action{display:flex;min-height:112px;align-items:center;flex-direction:column;justify-content:center;padding:12px;border:1px solid #edf1ef;border-radius:15px;color:#55665f;background:#f7f9f8;cursor:pointer;transition:.18s ease}.quick-action:hover{border-color:#cfded8;box-shadow:0 8px 20px rgba(30,78,65,.07);transform:translateY(-1px)}.quick-action>span{display:grid;place-items:center;width:35px;height:35px;border-radius:11px;color:#667770;background:#fff;font-size:17px;box-shadow:0 4px 12px rgba(28,63,54,.06)}.quick-action b{margin-top:9px;font-size:12px}.quick-action small{margin-top:3px;color:#9aa49f;font-size:9px}.quick-action.primary{border-color:#183c33;color:#fff;background:#173930}.quick-action.primary>span{color:#e8d7aa;background:rgba(255,255,255,.1);box-shadow:none}.quick-action.primary small{color:rgba(255,255,255,.5)}
