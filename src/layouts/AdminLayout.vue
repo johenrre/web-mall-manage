@@ -2,8 +2,11 @@
   <a-layout class="admin-layout">
     <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible class="side" :width="248" :collapsed-width="76">
       <div class="brand" :class="{ compact: collapsed }">
-        <div class="brand-seal">璞</div>
-        <div v-if="!collapsed"><div class="brand-name">璞光管理</div><div class="brand-sub">PU GUANG STUDIO</div></div>
+        <BrandLogo class="brand-seal" :src="branding.state.logoUrl" :name="branding.state.appName" />
+        <div v-if="!collapsed" class="brand-copy">
+          <div class="brand-name" :title="branding.state.appName">{{ branding.state.appName }}</div>
+          <div class="brand-sub">小程序管理后台</div>
+        </div>
       </div>
       <a-menu theme="dark" mode="inline" :selected-keys="selectedKeys" :items="menuItems" @click="onMenuClick" />
       <div class="side-foot" :class="{ compact: collapsed }">
@@ -66,12 +69,15 @@ import {
   SafetyCertificateOutlined, SkinOutlined, SolutionOutlined, TeamOutlined, UserSwitchOutlined,
 } from '@ant-design/icons-vue'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
+import BrandLogo from '@/components/BrandLogo.vue'
 import { get } from '@/api/http'
 import { useAuth } from '@/stores/auth'
+import { useBranding } from '@/stores/branding'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuth()
+const branding = useBranding()
 const isMobile = ref(window.innerWidth <= 768)
 const collapsed = ref(window.innerWidth < 1100)
 const passwordOpen = ref(false)
@@ -183,7 +189,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .admin-layout{min-height:100vh}.side{position:fixed!important;inset:0 auto 0 0;z-index:20;overflow:auto;background:linear-gradient(180deg,#153f35 0%,#102e28 100%)!important;box-shadow:8px 0 34px rgba(16,52,43,.12)}
-.side~.content-layout{min-width:0;margin-left:248px;transition:margin-left .2s}.side.ant-layout-sider-collapsed~.content-layout{margin-left:76px}.side-mask{position:fixed;inset:0;z-index:19;padding:0;border:0;background:rgba(8,31,25,.38);cursor:pointer}.brand{height:88px;display:flex;align-items:center;gap:13px;padding:0 22px;color:white}.brand.compact{justify-content:center;padding:0}.brand-seal{display:grid;place-items:center;flex:0 0 42px;height:42px;border:1px solid rgba(232,216,174,.75);border-radius:50%;color:#e8d8ae;font:22px Georgia,serif}.brand-name{font:700 18px Georgia,'Noto Serif SC',serif}.brand-sub{margin-top:3px;color:rgba(255,255,255,.45);font-size:8px;letter-spacing:.16em}.side-foot{position:absolute;bottom:20px;left:16px;right:16px;display:flex;align-items:center;gap:10px;padding:12px;color:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.04)}.side-foot.compact{justify-content:center}.side-foot span{display:flex;flex-direction:column}.side-foot b{font-size:12px}.side-foot small{margin-top:2px;color:rgba(255,255,255,.35);font-size:9px}.topbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;height:68px;padding:0 26px;border-bottom:1px solid rgba(31,104,84,.08);background:rgba(255,255,255,.88);backdrop-filter:blur(16px);line-height:normal}.topbar-left,.topbar-actions{display:flex;align-items:center;gap:12px}.collapse-btn{font-size:18px}.route-label{display:flex;align-items:center;gap:8px;color:#9ba6a1;font-size:13px}.route-label strong{color:#40544d}.user-button{display:flex;align-items:center;gap:10px;padding:6px 8px;border:0;border-radius:12px;color:#42564f;background:transparent;cursor:pointer;line-height:1.2}.user-button:hover{background:#f0f5f2}.user-avatar{color:#fff;background:linear-gradient(135deg,#327b65,#b99455)}.user-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:82px;line-height:1.2}.user-meta b{max-width:120px;overflow:hidden;font-size:13px;line-height:18px;text-overflow:ellipsis;white-space:nowrap}.user-meta small{margin-top:2px;color:#9aa6a1;font-size:10px;line-height:14px}.main-content{min-width:0;min-height:calc(100vh - 68px);padding:26px}.menu-label{display:flex;align-items:center;justify-content:space-between;gap:8px}.menu-count{min-width:22px;height:18px;padding:0 6px;border-radius:9px;color:#fff;background:#c58b45;font-size:10px;line-height:18px;text-align:center}
+.side~.content-layout{min-width:0;margin-left:248px;transition:margin-left .2s}.side.ant-layout-sider-collapsed~.content-layout{margin-left:76px}.side-mask{position:fixed;inset:0;z-index:19;padding:0;border:0;background:rgba(8,31,25,.38);cursor:pointer}.brand{height:88px;display:flex;align-items:center;gap:13px;padding:0 22px;color:white}.brand.compact{justify-content:center;padding:0}.brand-seal{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(232,216,174,.75);border-radius:50%;color:#e8d8ae;font:22px Georgia,serif}.brand-seal :deep(img){object-fit:contain;padding:3px;background:#fff}.brand-copy{min-width:0}.brand-name{max-width:148px;overflow:hidden;font:700 17px Georgia,'Noto Serif SC',serif;text-overflow:ellipsis;white-space:nowrap}.brand-sub{margin-top:3px;color:rgba(255,255,255,.45);font-size:8px;letter-spacing:.12em}.side-foot{position:absolute;bottom:20px;left:16px;right:16px;display:flex;align-items:center;gap:10px;padding:12px;color:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.04)}.side-foot.compact{justify-content:center}.side-foot span{display:flex;flex-direction:column}.side-foot b{font-size:12px}.side-foot small{margin-top:2px;color:rgba(255,255,255,.35);font-size:9px}.topbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;height:68px;padding:0 26px;border-bottom:1px solid rgba(31,104,84,.08);background:rgba(255,255,255,.88);backdrop-filter:blur(16px);line-height:normal}.topbar-left,.topbar-actions{display:flex;align-items:center;gap:12px}.collapse-btn{font-size:18px}.route-label{display:flex;align-items:center;gap:8px;color:#9ba6a1;font-size:13px}.route-label strong{color:#40544d}.user-button{display:flex;align-items:center;gap:10px;padding:6px 8px;border:0;border-radius:12px;color:#42564f;background:transparent;cursor:pointer;line-height:1.2}.user-button:hover{background:#f0f5f2}.user-avatar{color:#fff;background:linear-gradient(135deg,#327b65,#b99455)}.user-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:82px;line-height:1.2}.user-meta b{max-width:120px;overflow:hidden;font-size:13px;line-height:18px;text-overflow:ellipsis;white-space:nowrap}.user-meta small{margin-top:2px;color:#9aa6a1;font-size:10px;line-height:14px}.main-content{min-width:0;min-height:calc(100vh - 68px);padding:26px}.menu-label{display:flex;align-items:center;justify-content:space-between;gap:8px}.menu-count{min-width:22px;height:18px;padding:0 6px;border-radius:9px;color:#fff;background:#c58b45;font-size:10px;line-height:18px;text-align:center}
 :deep(.ant-menu-dark){background:transparent}:deep(.ant-menu-item-group-title){padding:18px 24px 8px!important;color:rgba(255,255,255,.32)!important;font-size:10px;letter-spacing:.12em}:deep(.ant-menu-item){margin-inline:12px!important;width:calc(100% - 24px)!important}:deep(.ant-menu-item-selected){box-shadow:inset 3px 0 #d7bb7b}
 @media(max-width:768px){.side{position:fixed!important;transition:transform .2s}.side.ant-layout-sider-collapsed{transform:translateX(-100%)}.side:not(.ant-layout-sider-collapsed){width:248px!important;min-width:248px!important;transform:translateX(0)}.side~.content-layout,.side.ant-layout-sider-collapsed~.content-layout{margin-left:0}.topbar{padding:0 12px}.route-label span,.route-label :deep(svg),.user-meta{display:none}.main-content{padding:18px 12px}}
 </style>

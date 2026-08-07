@@ -6,6 +6,33 @@
 
 <script setup lang="ts">
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useBranding } from '@/stores/branding'
+
+const route = useRoute()
+const branding = useBranding()
+
+watch(
+  [() => route.meta.title, () => branding.state.appName, () => branding.state.logoUrl],
+  ([routeTitle, appName, logoUrl]) => {
+    document.title = `${String(routeTitle || '管理后台')} · ${appName}`
+    const selector = 'link[data-app-brand-icon="true"]'
+    const existing = document.head.querySelector<HTMLLinkElement>(selector)
+    if (!logoUrl) {
+      existing?.remove()
+      return
+    }
+    const icon = existing || document.createElement('link')
+    icon.rel = 'icon'
+    icon.href = logoUrl
+    icon.dataset.appBrandIcon = 'true'
+    if (!existing) document.head.appendChild(icon)
+  },
+  { immediate: true },
+)
+
+void branding.load()
 
 const theme = {
   token: {

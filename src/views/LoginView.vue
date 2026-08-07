@@ -1,8 +1,8 @@
 <template>
   <main class="login-page">
     <section class="login-story">
-      <div class="brand-mark">璞</div>
-      <p class="eyebrow">PU GUANG STUDIO</p>
+      <BrandLogo class="brand-mark" :src="branding.state.logoUrl" :name="branding.state.appName" />
+      <p class="eyebrow">{{ branding.state.appName }} · ADMIN STUDIO</p>
       <h1>让每一颗珠子，<br />都有被看见的秩序。</h1>
       <p class="story-copy">从订单履约到设计审核，在一处管理商城的日常运转。</p>
       <div class="feature-pills">
@@ -12,7 +12,10 @@
 
     <section class="login-panel">
       <div class="login-card">
-        <div class="mobile-brand"><span>璞</span> 璞光管理后台</div>
+        <div class="mobile-brand">
+          <BrandLogo class="mobile-brand__logo" :src="branding.state.logoUrl" :name="branding.state.appName" />
+          <span>{{ branding.adminName.value }}</span>
+        </div>
         <a-tag color="green" :bordered="false">ADMIN CONSOLE</a-tag>
         <h2>欢迎回来</h2>
         <p>请使用后台账号继续</p>
@@ -44,10 +47,13 @@ import { message } from 'ant-design-vue'
 import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { errorMessage } from '@/api/http'
 import { useAuth } from '@/stores/auth'
+import { useBranding } from '@/stores/branding'
+import BrandLogo from '@/components/BrandLogo.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuth()
+const branding = useBranding()
 const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
@@ -69,7 +75,8 @@ async function submit() {
 .login-page { min-height: 100vh; display: grid; grid-template-columns: minmax(420px, 1.15fr) minmax(460px, .85fr); background: #f4f5f1; }
 .login-story { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 9vw; color: #f7f2e8; background: linear-gradient(145deg, rgba(10,46,38,.95), rgba(23,77,63,.88)), url('https://images.unsplash.com/photo-1611085583191-a3b181a88401?auto=format&fit=crop&w=1400&q=80') center/cover; }
 .login-story::after { content: ''; position: absolute; inset: 22px; border: 1px solid rgba(255,255,255,.18); border-radius: 26px; pointer-events: none; }
-.brand-mark { display: grid; place-items: center; width: 66px; height: 66px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,.65); border-radius: 50%; font: 34px Georgia, serif; }
+.brand-mark { width: 66px; height: 66px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,.65); border-radius: 50%; font: 34px Georgia, serif; }
+.brand-mark :deep(img) { object-fit: contain; padding: 5px; }
 .eyebrow { margin: 0 0 20px; color: #d7c69e; font-size: 12px; letter-spacing: .3em; }
 h1 { margin: 0; font: 700 clamp(40px,4.3vw,68px)/1.23 Georgia,'Noto Serif SC',serif; letter-spacing: -.04em; }
 .story-copy { max-width: 500px; margin: 30px 0; color: rgba(255,255,255,.72); font-size: 16px; line-height: 1.8; }
@@ -81,5 +88,5 @@ h1 { margin: 0; font: 700 clamp(40px,4.3vw,68px)/1.23 Georgia,'Noto Serif SC',se
 .login-card > p { margin: 0 0 30px; color: #7d8984; }
 .login-foot { margin-top: 24px; color: #8a9792; font-size: 12px; text-align: center; }
 .mobile-brand { display: none; }
-@media(max-width:900px){.login-page{grid-template-columns:1fr}.login-story{display:none}.login-panel{padding:24px}.mobile-brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;color:#254b40;font-weight:700}.mobile-brand span{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;color:white;background:#1f6854}.login-card{padding:32px}}
+@media(max-width:900px){.login-page{grid-template-columns:1fr}.login-story{display:none}.login-panel{padding:24px}.mobile-brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;color:#254b40;font-weight:700}.mobile-brand__logo{width:36px;height:36px;border-radius:50%;color:white;background:#1f6854}.mobile-brand__logo :deep(img){object-fit:contain;padding:3px;background:#fff}.login-card{padding:32px}}
 </style>

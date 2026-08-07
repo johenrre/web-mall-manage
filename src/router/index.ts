@@ -30,7 +30,6 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  document.title = `${String(to.meta.title || '管理后台')} · 璞光`
   if (to.meta.public) return true
   const auth = useAuth()
   const valid = await auth.bootstrap()

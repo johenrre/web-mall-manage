@@ -1,8 +1,14 @@
 <template>
   <div
     class="bracelet-preview"
+    :class="{ 'bracelet-preview--interactive': interactive }"
     :style="{ width: `${size}px`, height: `${size}px` }"
     :aria-label="layout.beads.length ? `${layout.beads.length} 颗珠子的手串预览` : '空手串预览'"
+    :role="interactive ? 'button' : undefined"
+    :tabindex="interactive ? 0 : undefined"
+    @click="handleActivate"
+    @keydown.enter.prevent="handleActivate"
+    @keydown.space.prevent="handleActivate"
   >
     <div v-if="!layout.beads.length" class="empty">无预览</div>
     <div
@@ -27,10 +33,6 @@
         class="bracelet-preview__bead"
         :style="bead.wrapperStyle"
         :title="bead.name"
-        role="button"
-        tabindex="0"
-        @click="$emit('select', bead.source)"
-        @keydown.enter="$emit('select', bead.source)"
       >
         <div class="bracelet-preview__rotator" :style="bead.rotatorStyle">
           <img
@@ -46,15 +48,14 @@
       </div>
     </div>
     <div
-      v-if="layout.beads.length"
+      v-if="layout.beads.length && branding.state.logoUrl"
       class="center-mark"
       :style="{
         width: `${centerMarkSize}px`,
         height: `${centerMarkSize}px`,
-        fontSize: `${centerMarkFontSize}px`,
       }"
     >
-      璞
+      <img :src="branding.state.logoUrl" :alt="`${branding.state.appName} Logo`" />
     </div>
   </div>
 </template>
@@ -62,6 +63,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { resolveMedia } from '@/utils/format'
+import { useBranding } from '@/stores/branding'
 
 interface PreviewMaterial extends Record<string, unknown> {
   id: string
@@ -98,16 +100,22 @@ const props = withDefaults(defineProps<{
   pattern?: unknown[]|string
   materialMap?: Record<string,Record<string,unknown>>
   size?: number
+  interactive?: boolean
 }>(), {
   pattern: () => [],
   materialMap: () => ({}),
   size: 170,
+  interactive: false,
 })
 
-defineEmits<{select:[bead:PreviewMaterial]}>()
+const emit=defineEmits<{activate:[]}>()
+const branding=useBranding()
 
 const centerMarkSize=computed(()=>Math.max(16,Math.min(36,props.size*.12)))
-const centerMarkFontSize=computed(()=>Math.max(9,Math.min(17,props.size*.058)))
+
+function handleActivate():void{
+  if(props.interactive&&layout.value.beads.length)emit('activate')
+}
 
 function finiteNumber(value:unknown,fallback:number):number{
   const number=Number(value)
@@ -282,5 +290,5 @@ const layout=computed<PreviewLayout>(()=>{
 </script>
 
 <style scoped>
-.bracelet-preview{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:visible;border-radius:50%;background:radial-gradient(circle,rgba(32,86,71,.02) 36%,rgba(32,86,71,.055) 37%,transparent 40%)}.bracelet-preview__inner{position:relative;flex:0 0 auto;transform-origin:center}.bracelet-preview__guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:1px solid rgba(66,104,92,.075);border-radius:50%;box-shadow:0 2px 8px rgba(36,71,61,.04)}.bracelet-preview__bead{position:absolute;display:flex;align-items:center;justify-content:center;outline:none;cursor:pointer}.bracelet-preview__rotator{position:relative;width:100%;height:100%}.bracelet-preview__image{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center;filter:drop-shadow(0 1px 1.5px rgba(43,34,24,.2))}.bracelet-preview__fallback{width:100%;height:100%;border:1px solid rgba(77,61,44,.14);border-radius:50%;box-shadow:0 1px 3px rgba(51,41,29,.15)}.center-mark{position:absolute;z-index:300000;top:50%;left:50%;display:grid;place-items:center;transform:translate(-50%,-50%);border:1px solid #d7c498;border-radius:50%;color:#8a6a2f;background:rgba(255,255,255,.82);font-family:Georgia,serif}.empty{position:absolute;inset:0;display:grid;place-items:center;color:#a4afa9;font-size:12px}
+.bracelet-preview{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:visible;border-radius:50%;background:radial-gradient(circle,rgba(32,86,71,.02) 36%,rgba(32,86,71,.055) 37%,transparent 40%)}.bracelet-preview--interactive{outline:none;cursor:zoom-in;transition:transform .16s ease,filter .16s ease}.bracelet-preview--interactive:hover,.bracelet-preview--interactive:focus-visible{filter:drop-shadow(0 7px 14px rgba(34,72,61,.12));transform:scale(1.025)}.bracelet-preview__inner{position:relative;flex:0 0 auto;transform-origin:center}.bracelet-preview__guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:1px solid rgba(66,104,92,.075);border-radius:50%;box-shadow:0 2px 8px rgba(36,71,61,.04)}.bracelet-preview__bead{position:absolute;display:flex;align-items:center;justify-content:center;outline:none}.bracelet-preview__rotator{position:relative;width:100%;height:100%}.bracelet-preview__image{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center;filter:drop-shadow(0 1px 1.5px rgba(43,34,24,.2))}.bracelet-preview__fallback{width:100%;height:100%;border:1px solid rgba(77,61,44,.14);border-radius:50%;box-shadow:0 1px 3px rgba(51,41,29,.15)}.center-mark{position:absolute;z-index:300000;top:50%;left:50%;display:grid;overflow:hidden;place-items:center;transform:translate(-50%,-50%);border:1px solid rgba(75,104,94,.18);border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 2px 8px rgba(36,71,61,.08)}.center-mark img{display:block;width:82%;height:82%;border-radius:50%;object-fit:contain}.empty{position:absolute;inset:0;display:grid;place-items:center;color:#a4afa9;font-size:12px}
 </style>
