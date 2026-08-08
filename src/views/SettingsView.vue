@@ -388,10 +388,62 @@
             </div>
 
             <section class="setting-section">
-              <h3 class="setting-section-title">用户服务</h3>
-              <a-form-item label="购买须知">
-                <a-textarea v-model:value="form.miniprogram_purchase_notice" :rows="4" placeholder="下单前向用户展示的说明" />
-              </a-form-item>
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">购买须知图片</h3>
+                  <p>小程序按当前顺序展示，适合上传排版完整的须知长图；未配置时不显示购买须知。</p>
+                </div>
+                <a-button type="primary" ghost :disabled="purchaseNoticeImages.length >= 10" @click="addPurchaseNoticeImage">
+                  <PlusOutlined /> 添加图片
+                </a-button>
+              </div>
+
+              <a-table
+                class="slide-table purchase-notice-table"
+                :columns="purchaseNoticeColumns"
+                :data-source="purchaseNoticeImages"
+                :pagination="false"
+                row-key="rowKey"
+                size="middle"
+              >
+                <template #emptyText>
+                  <a-empty description="尚未配置，小程序不会显示购买须知区域" />
+                </template>
+                <template #bodyCell="{ column, record, index }">
+                  <template v-if="column.key === 'order'">
+                    <div class="tray-order-cell">
+                      <strong>{{ index + 1 }}</strong>
+                    </div>
+                  </template>
+                  <template v-else-if="column.key === 'image'">
+                    <div class="slide-image-cell">
+                      <div class="slide-image-preview slide-image-preview--notice">
+                        <img v-if="record.image" :src="resolveMedia(record.image)" alt="购买须知图片预览" />
+                        <PictureOutlined v-else />
+                      </div>
+                      <div class="slide-image-inputs">
+                        <a-input v-model:value="record.image" placeholder="图片地址或上传图片" @blur="record.image = normalizeSlideImage(record.image)" />
+                        <a-upload
+                          :show-upload-list="false"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          :before-upload="validateSlideFile"
+                          :custom-request="(options: any) => uploadPurchaseNoticeImage(options, record)"
+                        >
+                          <a-button size="small" :loading="uploadingPurchaseNoticeKey === record.rowKey"><UploadOutlined /> 上传图片</a-button>
+                        </a-upload>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <a-space>
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="movePurchaseNoticeImage(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === purchaseNoticeImages.length - 1" title="下移" @click="movePurchaseNoticeImage(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger title="删除" @click="removePurchaseNoticeImage(record.rowKey)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </template>
+                </template>
+              </a-table>
+              <div class="field-help">最多 10 张，建议使用同宽图片；小程序会按顺序等宽展示。</div>
             </section>
 
             <section class="setting-section">
@@ -594,6 +646,12 @@ interface EditableTrayImage {
   image: string
 }
 
+interface EditablePurchaseNoticeImage {
+  rowKey: string
+  id: string
+  image: string
+}
+
 interface EditableContactQr {
   rowKey: string
   id: string
@@ -626,6 +684,7 @@ const saving = ref(false)
 const themePresetDirty = ref(false)
 const uploadingSlideKey = ref('')
 const uploadingTrayKey = ref('')
+const uploadingPurchaseNoticeKey = ref('')
 const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const themeOptions: ThemeOption[] = [
@@ -640,6 +699,7 @@ const contact = reactive({ wechatId: '' })
 const contactQrs = ref<EditableContactQr[]>([])
 const slides = ref<EditableHomeSlide[]>([])
 const trayImages = ref<EditableTrayImage[]>([])
+const purchaseNoticeImages = ref<EditablePurchaseNoticeImage[]>([])
 const refundReasons = ref<string[]>([])
 const mainEntrySlots = ref<EditableImageSlot[]>([
   { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
@@ -653,6 +713,7 @@ const shortcutSlots = ref<EditableImageSlot[]>([
 ])
 let slideSequence = 0
 let trayImageSequence = 0
+let purchaseNoticeImageSequence = 0
 let contactQrSequence = 0
 
 const slideColumns = [
@@ -670,6 +731,12 @@ const trayColumns = [
   { title: '操作', key: 'actions', width: 150 },
 ]
 
+const purchaseNoticeColumns = [
+  { title: '顺序', key: 'order', width: 100 },
+  { title: '购买须知图片', key: 'image' },
+  { title: '操作', key: 'actions', width: 150 },
+]
+
 const stringKeys = [
   'points_rule_text',
   'refund_return_address',
@@ -679,7 +746,6 @@ const stringKeys = [
   'miniprogram_app_secret',
   'miniprogram_name',
   'miniprogram_theme_key',
-  'miniprogram_purchase_notice',
   'site_title_logo_image',
   'miniprogram_home_process_image',
   'miniprogram_home_activity_image',
@@ -797,6 +863,37 @@ function parseTrayImages(value: unknown): EditableTrayImage[] {
 function serializeTrayImages(): string {
   if (!trayImages.value.length) return ''
   return JSON.stringify(trayImages.value.map((item) => ({
+    id: item.id,
+    image: normalizeSlideImage(item.image),
+  })))
+}
+
+function createPurchaseNoticeImage(source: any = {}): EditablePurchaseNoticeImage {
+  purchaseNoticeImageSequence += 1
+  return {
+    rowKey: `purchase-notice-editor-${purchaseNoticeImageSequence}`,
+    id: text(source.id) || `purchase-notice-${Date.now()}-${purchaseNoticeImageSequence}`,
+    image: normalizeSlideImage(
+      typeof source === 'string'
+        ? source
+        : source.image || source.imageUrl || source.image_url || source.url,
+    ),
+  }
+}
+
+function parsePurchaseNoticeImages(value: unknown): EditablePurchaseNoticeImage[] {
+  try {
+    const parsed = JSON.parse(text(value) || '[]')
+    return Array.isArray(parsed) ? parsed.map(createPurchaseNoticeImage).slice(0, 10) : []
+  } catch {
+    message.error('数据库中的购买须知图片配置格式错误，请重新配置')
+    return []
+  }
+}
+
+function serializePurchaseNoticeImages(): string {
+  if (!purchaseNoticeImages.value.length) return ''
+  return JSON.stringify(purchaseNoticeImages.value.map((item) => ({
     id: item.id,
     image: normalizeSlideImage(item.image),
   })))
@@ -927,6 +1024,7 @@ async function load() {
     form.kuaidi100_cache_minutes = Number(data.kuaidi100_cache_minutes || 30)
     slides.value = parseSlides(data.miniprogram_home_slides_json)
     trayImages.value = parseTrayImages(data.miniprogram_diy_tray_images_json)
+    purchaseNoticeImages.value = parsePurchaseNoticeImages(data.miniprogram_purchase_notice_images_json)
     try {
       const parsed = JSON.parse(String(data.miniprogram_refund_reasons_json || '[]'))
       refundReasons.value = Array.isArray(parsed) ? parsed.map((item) => text(item)).filter(Boolean).slice(0, 10) : []
@@ -983,6 +1081,22 @@ function moveTrayImage(index: number, offset: number) {
 
 function removeTrayImage(rowKey: string) {
   trayImages.value = trayImages.value.filter((item) => item.rowKey !== rowKey)
+}
+
+function addPurchaseNoticeImage() {
+  if (purchaseNoticeImages.value.length >= 10) return message.warning('购买须知最多配置 10 张')
+  purchaseNoticeImages.value.push(createPurchaseNoticeImage())
+}
+
+function movePurchaseNoticeImage(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= purchaseNoticeImages.value.length) return
+  const [item] = purchaseNoticeImages.value.splice(index, 1)
+  if (item) purchaseNoticeImages.value.splice(target, 0, item)
+}
+
+function removePurchaseNoticeImage(rowKey: string) {
+  purchaseNoticeImages.value = purchaseNoticeImages.value.filter((item) => item.rowKey !== rowKey)
 }
 
 function addContactQr() {
@@ -1053,6 +1167,21 @@ async function uploadTrayImage(options: any, trayImage: EditableTrayImage) {
   }
 }
 
+async function uploadPurchaseNoticeImage(options: any, item: EditablePurchaseNoticeImage) {
+  uploadingPurchaseNoticeKey.value = item.rowKey
+  try {
+    const result = await uploadImage(options.file as File)
+    item.image = result.url
+    options.onSuccess?.(result)
+    message.success(result.source === 'oss' ? '购买须知图片已上传到阿里云 OSS' : '购买须知图片已上传到本地')
+  } catch (error) {
+    message.error(errorMessage(error))
+    options.onError?.(error as Error)
+  } finally {
+    uploadingPurchaseNoticeKey.value = ''
+  }
+}
+
 async function save() {
   if (!themeOptions.some((option) => option.value === form.miniprogram_theme_key)) {
     return message.warning('请选择有效的小程序页面风格')
@@ -1067,6 +1196,11 @@ async function save() {
     return message.warning('每个 DIY 珠盘都必须填写图片地址或上传图片')
   }
   if (trayImages.value.length > 5) return message.warning('DIY 珠盘最多配置 5 张')
+  for (const item of purchaseNoticeImages.value) item.image = normalizeSlideImage(item.image)
+  if (purchaseNoticeImages.value.some((item) => !item.image)) {
+    return message.warning('每张购买须知都必须填写图片地址或上传图片')
+  }
+  if (purchaseNoticeImages.value.length > 10) return message.warning('购买须知最多配置 10 张')
   for (const item of contactQrs.value) item.image = normalizeSlideImage(item.image)
   if (contactQrs.value.some((item) => !item.image)) {
     return message.warning('请上传客服二维码，或删除未填写的二维码项')
@@ -1090,6 +1224,7 @@ async function save() {
     miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
     miniprogram_diy_tray_images_json: serializeTrayImages(),
+    miniprogram_purchase_notice_images_json: serializePurchaseNoticeImages(),
     miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
     kuaidi100_cache_minutes: kuaidi100CacheMinutes,
   }
@@ -1227,6 +1362,7 @@ onMounted(() => {
 .slide-image-preview { display: grid; width: 96px; height: 64px; overflow: hidden; flex: 0 0 96px; place-items: center; border: 1px dashed #cbd8d2; border-radius: 9px; color: #93a39c; background: #f5f8f7; font-size: 22px; }
 .slide-image-preview img { width: 100%; height: 100%; object-fit: cover; }
 .slide-image-preview--tray { width: 76px; height: 76px; flex-basis: 76px; border-radius: 50%; }
+.slide-image-preview--notice { width: 96px; height: 120px; flex-basis: 96px; }
 .slide-image-inputs { display: flex; min-width: 180px; flex: 1; flex-direction: column; align-items: flex-start; gap: 7px; }
 .setting-area-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 20px 4px 2px; border-top: 1px solid #e5ece8; }
 .setting-area-heading--first { padding-top: 2px; border-top: 0; }
