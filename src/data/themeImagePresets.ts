@@ -31,7 +31,6 @@ export interface ThemeImagePreset {
   homeProcessImage: string
   homeActivityImage: string
   mallHeroImage: string
-  diyShowcaseBrandImage: string
   diyShowcaseCopy: ThemeSlideCopy
 }
 
@@ -68,7 +67,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785862284008_03244be81498.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785862289295_101615b5d7f1.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785861676865_0c1694dafd5f.png",
     "diyShowcaseCopy": { "eyebrow": "MY CRYSTAL · 今日作品", "title": "把喜欢的光，串成日常", "description": "一串一念，留住此刻的温柔。" }
   },
   "oriental-song": {
@@ -99,7 +97,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176881156_924f9e8567ba.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176881621_b5a99c5ffc45.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176882082_5df877f19a5c.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176882557_378fe5ebb850.png",
     "diyShowcaseCopy": { "eyebrow": "ORIENTAL PIECE · 今日雅作", "title": "一腕清韵，自有东方", "description": "以青瓷、月白与淡墨色入串，把含蓄心意留在日常。" }
   },
   "glacier-crystal": {
@@ -130,7 +127,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176889024_aa7c67347406.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176889524_9acc9325c2b6.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176890003_821f58190240.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176890496_2bfec28b879c.png",
     "diyShowcaseCopy": { "eyebrow": "CRYSTAL LIGHT · 今日作品", "title": "把冰川的光，留在腕间", "description": "清透矿石与冷色微光相遇，照见轻盈而坚定的自己。" }
   },
   "cream-french": {
@@ -161,7 +157,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176914529_37121cadf51c.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176915019_8d4b4a498d80.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176915520_191fa92e1c77.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176916007_da279a04a027.png",
     "diyShowcaseCopy": { "eyebrow": "FRENCH MOOD · 今日作品", "title": "把浪漫，串成日常", "description": "奶油白、灰粉与香槟金轻轻相拥，温柔得恰到好处。" }
   },
   "forest-mineral": {
@@ -192,7 +187,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176922395_b1969c275fb7.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176922874_3957597a9a6d.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176923348_c82ae4b49768.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176923829_6dd20de82068.png",
     "diyShowcaseCopy": { "eyebrow": "FOREST NOTE · 今日作品", "title": "循着自然，串出自己", "description": "苔绿、木色与原生矿纹交错，让每一次佩戴都靠近大地。" }
   },
   "midnight-astrolabe": {
@@ -223,7 +217,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176949521_751b7a5f2e44.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176950020_75a4ee6b6980.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176950501_1f3bf8d71de7.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176950976_4f220f39e782.png",
     "diyShowcaseCopy": { "eyebrow": "STAR CHART · 今日作品", "title": "把心愿，排成星图", "description": "午夜蓝与月光银沿腕间运行，收藏只属于你的夜色与光。" }
   },
   "japanese-wabi-sabi": {
@@ -254,7 +247,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176881156_924f9e8567ba.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198931056_bd6b14aab908.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198931753_04501325a3e1.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176882557_378fe5ebb850.png",
     "diyShowcaseCopy": { "eyebrow": "WABI SABI · 今日作品", "title": "让不完美的纹理，安静成为日常", "description": "一石一痕，留下自然手作的温度。" }
   },
   "aegean-sea-salt": {
@@ -285,7 +277,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176889024_aa7c67347406.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198955740_24534f665bb8.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198956442_f3602ac0e001.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176890496_2bfec28b879c.png",
     "diyShowcaseCopy": { "eyebrow": "AEGEAN LIGHT · 今日作品", "title": "把海风与日光，串进轻盈日常", "description": "一抹海盐蓝，留住晴朗心绪。" }
   },
   "desert-terracotta": {
@@ -316,7 +307,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176914529_37121cadf51c.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198964018_8c439148a614.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198964717_525bb530f001.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176916007_da279a04a027.png",
     "diyShowcaseCopy": { "eyebrow": "DESERT CLAY · 今日作品", "title": "把旷野的暖意，收进掌心", "description": "赤陶与矿石，串起有温度的自由。" }
   },
   "moonlit-pearl": {
@@ -347,7 +337,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176889024_aa7c67347406.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198982830_f6ca6bcee254.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198983580_ac5849af39ea.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176890496_2bfec28b879c.png",
     "diyShowcaseCopy": { "eyebrow": "PEARL MOON · 今日作品", "title": "把温柔月色，戴在腕间", "description": "珠光轻落，陪你安静闪耀。" }
   },
   "morandi-gallery": {
@@ -378,7 +367,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198991932_8ae15247fb02.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198992660_1e8a57f1ff43.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785861676865_0c1694dafd5f.png",
     "diyShowcaseCopy": { "eyebrow": "MORANDI GALLERY · 今日作品", "title": "让克制色彩，讲述你的灵感", "description": "低饱和的每一颗，都有自己的情绪。" }
   },
   "monochrome-museum": {
@@ -409,7 +397,6 @@ export const themeImagePresets = {
     "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176881156_924f9e8567ba.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786199009000_c9c2c7d5bc16.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786199009732_328c35dc7242.jpg",
-    "diyShowcaseBrandImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176882557_378fe5ebb850.png",
     "diyShowcaseCopy": { "eyebrow": "MONOCHROME EDIT · 今日作品", "title": "让材质与轮廓，成为主角", "description": "去掉喧闹，只留下矿石本身的光。" }
   }
 } satisfies Record<ThemeKey, ThemeImagePreset>

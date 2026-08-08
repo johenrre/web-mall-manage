@@ -76,7 +76,7 @@
                 message="主题颜色、配套图片和主题文案已填入当前表单，尚未生效"
                 description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码、音乐和业务数据不会被替换。"
               />
-              <div class="field-help">每套风格包含 16 张配套图片、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
+              <div class="field-help">每套风格包含 15 张配套图片、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
             </section>
 
             <div class="setting-area-heading setting-area-heading--first">
@@ -95,6 +95,14 @@
               <a-form-item label="小程序 Logo / 默认头像">
                 <ImageUploader v-model="form.site_title_logo_image" />
                 <div class="field-help">用于小程序品牌标识；用户没有设置头像时也显示这张图。</div>
+              </a-form-item>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">启动加载页</h3>
+              <a-form-item label="加载页背景图">
+                <ImageUploader v-model="form.miniprogram_launch_background_image" />
+                <div class="field-help">建议上传 9:16 竖图并控制在 500KB 内；首次安装或图片加载失败时使用小程序内置背景图。</div>
               </a-form-item>
             </section>
 
@@ -341,13 +349,9 @@
               <div class="section-toolbar">
                 <div>
                   <h3 class="setting-section-title">分享展示配置</h3>
-                  <p>用于 DIY 页面作品展示状态顶部的品牌图与分享文案。</p>
+                  <p>用于 DIY 页面作品展示状态的分享文案。</p>
                 </div>
               </div>
-              <a-form-item label="顶部品牌图">
-                <ImageUploader v-model="form.miniprogram_diy_showcase_brand_image" />
-                <div class="field-help">建议上传透明底 PNG，横向约 3:1，图片中可同时包含 Logo 和品牌文字；未配置时不显示。</div>
-              </a-form-item>
               <div class="form-grid">
                 <a-form-item label="短标签">
                   <a-input
@@ -752,13 +756,13 @@ const stringKeys = [
   'miniprogram_app_secret',
   'miniprogram_name',
   'miniprogram_theme_key',
+  'miniprogram_launch_background_image',
   'site_title_logo_image',
   'miniprogram_home_process_image',
   'miniprogram_home_activity_image',
   'miniprogram_customer_service_float_image',
   'miniprogram_home_music_url',
   'miniprogram_mall_hero_image',
-  'miniprogram_diy_showcase_brand_image',
   'miniprogram_diy_showcase_eyebrow',
   'miniprogram_diy_showcase_title',
   'miniprogram_diy_showcase_description',
@@ -983,7 +987,6 @@ function handleThemeChange(value: unknown): void {
   form.miniprogram_home_process_image = preset.homeProcessImage
   form.miniprogram_home_activity_image = preset.homeActivityImage
   form.miniprogram_mall_hero_image = preset.mallHeroImage
-  form.miniprogram_diy_showcase_brand_image = preset.diyShowcaseBrandImage
   form.miniprogram_diy_showcase_eyebrow = preset.diyShowcaseCopy.eyebrow
   form.miniprogram_diy_showcase_title = preset.diyShowcaseCopy.title
   form.miniprogram_diy_showcase_description = preset.diyShowcaseCopy.description
