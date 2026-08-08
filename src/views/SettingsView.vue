@@ -76,7 +76,7 @@
                 message="主题颜色、配套图片和主题文案已填入当前表单，尚未生效"
                 description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码、音乐和业务数据不会被替换。"
               />
-              <div class="field-help">每套风格包含 15 张配套图片、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
+              <div class="field-help">每套风格包含 16 张配套图片（含启动加载页背景）、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
             </section>
 
             <div class="setting-area-heading setting-area-heading--first">
@@ -983,6 +983,7 @@ function handleThemeChange(value: unknown): void {
   const preset = themeImagePresets[value]
   form.miniprogram_theme_key = value
   form.site_title_logo_image = preset.siteTitleLogoImage
+  form.miniprogram_launch_background_image = preset.launchBackgroundImage
   form.miniprogram_customer_service_float_image = preset.customerServiceFloatImage
   form.miniprogram_home_process_image = preset.homeProcessImage
   form.miniprogram_home_activity_image = preset.homeActivityImage

@@ -23,6 +23,7 @@ export interface ThemeSlideCopy {
 
 export interface ThemeImagePreset {
   siteTitleLogoImage: string
+  launchBackgroundImage: string
   customerServiceFloatImage: string
   slides: readonly string[]
   slideCopy: readonly ThemeSlideCopy[]
@@ -41,6 +42,7 @@ export interface ThemeImagePreset {
 export const themeImagePresets = {
   "healing-ins": {
     "siteTitleLogoImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206803740_f8738a7bfb09.jpg",
     "customerServiceFloatImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
     "slides": [
       "https://rocking.synology.me:3000/uploads/images/assets/2026/07/image_1785080208447_131dfcaaffda.jpg",
@@ -71,6 +73,7 @@ export const themeImagePresets = {
   },
   "oriental-song": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875151_c08b31126191.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206804651_849813dfd0a2.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875843_851f7d796ffa.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176876307_fbb0b7bbee68.jpg",
@@ -101,6 +104,7 @@ export const themeImagePresets = {
   },
   "glacier-crystal": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883035_bd5c04d7b9bf.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206805260_c6fb58c66778.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883530_3f871ebd70d5.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176884036_b7a619255c50.jpg",
@@ -131,6 +135,7 @@ export const themeImagePresets = {
   },
   "cream-french": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176908587_ac51df8a9c27.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206805895_1b45927653ee.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176909245_585fcb4467fc.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176909718_f606bafe7931.jpg",
@@ -161,6 +166,7 @@ export const themeImagePresets = {
   },
   "forest-mineral": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176916486_db4cb9fc6ddb.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206806799_74a81cc380f9.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176916996_51430aefe29a.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176917492_317b3b23ded7.jpg",
@@ -191,6 +197,7 @@ export const themeImagePresets = {
   },
   "midnight-astrolabe": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176941906_3a14e31fee4e.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206807394_03cd68ce9aae.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176942727_da76187629d9.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176943222_a933dffe0fbd.jpg",
@@ -221,6 +228,7 @@ export const themeImagePresets = {
   },
   "japanese-wabi-sabi": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875151_c08b31126191.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206828291_68b5a361fdf9.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875843_851f7d796ffa.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198894442_3fa049e34935.jpg",
@@ -251,6 +259,7 @@ export const themeImagePresets = {
   },
   "aegean-sea-salt": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883035_bd5c04d7b9bf.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206828939_39cffe1fa0df.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883530_3f871ebd70d5.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198948784_7b6fbd9ed667.jpg",
@@ -281,6 +290,7 @@ export const themeImagePresets = {
   },
   "desert-terracotta": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176908587_ac51df8a9c27.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206829862_24dd086bb878.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176909245_585fcb4467fc.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198957141_c92755f83f53.jpg",
@@ -311,6 +321,7 @@ export const themeImagePresets = {
   },
   "moonlit-pearl": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883035_bd5c04d7b9bf.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206830431_a683f158e125.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176883530_3f871ebd70d5.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198975515_c73bbdceacb7.jpg",
@@ -341,6 +352,7 @@ export const themeImagePresets = {
   },
   "morandi-gallery": {
     "siteTitleLogoImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206831370_b698381fdb3a.jpg",
     "customerServiceFloatImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198984404_ab620d3a704e.jpg",
@@ -371,6 +383,7 @@ export const themeImagePresets = {
   },
   "monochrome-museum": {
     "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875151_c08b31126191.jpg",
+    "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206831962_d4d096f7152a.jpg",
     "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786176875843_851f7d796ffa.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786199001550_054a11ef1ffd.jpg",
