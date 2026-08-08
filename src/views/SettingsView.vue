@@ -32,6 +32,53 @@
               <template #action><a-button size="small" @click="loadStorageStatus">刷新</a-button></template>
             </a-alert>
 
+            <section class="theme-switcher">
+              <div class="theme-switcher__heading">
+                <div>
+                  <span>THEME PRESET</span>
+                  <h3>页面风格</h3>
+                  <p>点击后同步替换主题颜色、配套图片、首页轮播与分享展示文案。</p>
+                </div>
+                <span class="theme-switcher__status" :class="{ 'is-dirty': themePresetDirty }">
+                  {{ themePresetDirty ? '待保存' : '已同步' }}
+                </span>
+              </div>
+
+              <div class="theme-choice-row" role="group" aria-label="页面风格">
+                <button
+                  v-for="option in themeOptions"
+                  :key="option.value"
+                  type="button"
+                  class="theme-choice"
+                  :class="{ 'is-selected': form.miniprogram_theme_key === option.value }"
+                  :aria-label="`应用${option.label}`"
+                  :aria-pressed="form.miniprogram_theme_key === option.value"
+                  @click="handleThemeChange(option.value)"
+                >
+                  <span class="theme-choice__swatches" aria-hidden="true">
+                    <i v-for="color in option.colors" :key="color" :style="{ backgroundColor: color }" />
+                  </span>
+                  <span class="theme-choice__title">
+                    {{ option.label }}
+                    <span v-if="form.miniprogram_theme_key === option.value" class="theme-choice__selected">
+                      <CheckOutlined />
+                    </span>
+                  </span>
+                  <small>{{ option.description }}</small>
+                </button>
+              </div>
+
+              <a-alert
+                v-if="themePresetDirty"
+                class="theme-preset-notice"
+                type="warning"
+                show-icon
+                message="主题颜色、配套图片和主题文案已填入当前表单，尚未生效"
+                description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码、音乐和业务数据不会被替换。"
+              />
+              <div class="field-help">每套风格包含 16 张配套图片、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
+            </section>
+
             <div class="setting-area-heading setting-area-heading--first">
               <div>
                 <span>COMMON</span>
@@ -507,6 +554,7 @@ import {
   ApiOutlined,
   ArrowDownOutlined,
   ArrowUpOutlined,
+  CheckOutlined,
   CustomerServiceOutlined,
   DeleteOutlined,
   MobileOutlined,
@@ -520,6 +568,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import AudioUploader from '@/components/AudioUploader.vue'
 import { errorMessage, get, post, uploadImage } from '@/api/http'
+import { isThemeKey, themeImagePresets, type ThemeKey } from '@/data/themeImagePresets'
 import { resolveMedia } from '@/utils/format'
 
 interface EditableHomeSlide {
@@ -564,13 +613,29 @@ interface StorageStatus {
   }
 }
 
+interface ThemeOption {
+  value: ThemeKey
+  label: string
+  description: string
+  colors: string[]
+}
+
 const tab = ref('store')
 const loading = ref(false)
 const saving = ref(false)
+const themePresetDirty = ref(false)
 const uploadingSlideKey = ref('')
 const uploadingTrayKey = ref('')
 const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
+const themeOptions: ThemeOption[] = [
+  { value: 'healing-ins', label: '治愈 INS 风', description: '暖白、鼠尾草绿与低饱和柔光，当前默认风格。', colors: ['#f6f4ef', '#fcfbf7', '#607d76', '#b77c72', '#414b48'] },
+  { value: 'oriental-song', label: '东方宋韵风', description: '宣纸、青瓷、墨灰与克制朱砂，安静雅致。', colors: ['#f3f0e8', '#fbf9f2', '#52685e', '#a65f52', '#303932'] },
+  { value: 'glacier-crystal', label: '冰川水晶风', description: '冰川白、浅蓝与清透银灰，轻盈冷静。', colors: ['#f2f7f9', '#fbfdfe', '#52798a', '#927f9e', '#263c46'] },
+  { value: 'cream-french', label: '奶油法式风', description: '奶油白、香槟灰粉与柔和旧金，温柔精致。', colors: ['#f7f1e8', '#fffaf3', '#9a7d6c', '#c68f8b', '#51453f'] },
+  { value: 'forest-mineral', label: '森系矿石风', description: '苔绿、木色与矿物铁锈色，自然沉静。', colors: ['#eef1ea', '#f8f7f0', '#4e6b58', '#aa7762', '#2f3b33'] },
+  { value: 'midnight-astrolabe', label: '暗夜星盘风', description: '午夜蓝、月光银蓝与旧金，深邃但不霓虹。', colors: ['#0e1422', '#151d2c', '#8fa8c7', '#c7a66b', '#f2eadb'] },
+]
 const contact = reactive({ wechatId: '' })
 const contactQrs = ref<EditableContactQr[]>([])
 const slides = ref<EditableHomeSlide[]>([])
@@ -613,6 +678,7 @@ const stringKeys = [
   'miniprogram_app_id',
   'miniprogram_app_secret',
   'miniprogram_name',
+  'miniprogram_theme_key',
   'miniprogram_purchase_notice',
   'site_title_logo_image',
   'miniprogram_home_process_image',
@@ -804,12 +870,59 @@ function serializeImageSlots(slots: EditableImageSlot[]): string {
   })))
 }
 
+function handleThemeChange(value: unknown): void {
+  if (!isThemeKey(value)) return
+
+  const preset = themeImagePresets[value]
+  form.miniprogram_theme_key = value
+  form.site_title_logo_image = preset.siteTitleLogoImage
+  form.miniprogram_customer_service_float_image = preset.customerServiceFloatImage
+  form.miniprogram_home_process_image = preset.homeProcessImage
+  form.miniprogram_home_activity_image = preset.homeActivityImage
+  form.miniprogram_mall_hero_image = preset.mallHeroImage
+  form.miniprogram_diy_showcase_brand_image = preset.diyShowcaseBrandImage
+  form.miniprogram_diy_showcase_eyebrow = preset.diyShowcaseCopy.eyebrow
+  form.miniprogram_diy_showcase_title = preset.diyShowcaseCopy.title
+  form.miniprogram_diy_showcase_description = preset.diyShowcaseCopy.description
+
+  const previousSlides = slides.value
+  slides.value = preset.slides.map((image, index) => {
+    const previous = previousSlides[index]
+    const copy = preset.slideCopy[index]
+    const content = {
+      image,
+      eyebrow: copy?.eyebrow || '',
+      title: copy?.title || '',
+      description: copy?.description || '',
+    }
+    return previous ? { ...previous, ...content } : createSlide({ ...content, enabled: true })
+  })
+
+  for (const slot of mainEntrySlots.value) {
+    if (slot.key === 'handcraft' || slot.key === 'finished-style') {
+      slot.image = preset.mainEntries[slot.key]
+    }
+  }
+  for (const slot of shortcutSlots.value) {
+    if (slot.key === 'inspiration-atlas' || slot.key === 'cart' || slot.key === 'orders' || slot.key === 'my-designs') {
+      slot.image = preset.shortcuts[slot.key]
+    }
+  }
+
+  themePresetDirty.value = true
+  const label = themeOptions.find((option) => option.value === value)?.label || value
+  message.info(`已切换为“${label}”完整预设，点击“保存全部设置”后才会生效`)
+}
+
 async function load() {
   loading.value = true
   try {
     const data: any = await get('/api/admin/settings_get')
     Object.assign(form, data)
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
+    if (!themeOptions.some((option) => option.value === form.miniprogram_theme_key)) {
+      form.miniprogram_theme_key = 'healing-ins'
+    }
     for (const key of boolKeys) form[key] = boolValue(data[key])
     form.kuaidi100_cache_minutes = Number(data.kuaidi100_cache_minutes || 30)
     slides.value = parseSlides(data.miniprogram_home_slides_json)
@@ -824,6 +937,7 @@ async function load() {
     hydrateImageSlots(mainEntrySlots.value, data.miniprogram_home_main_entries_json)
     hydrateImageSlots(shortcutSlots.value, data.miniprogram_home_shortcuts_json)
     hydrateContact(data.contact_service_json)
+    themePresetDirty.value = false
   } catch (error) {
     message.error(errorMessage(error))
   } finally {
@@ -940,6 +1054,9 @@ async function uploadTrayImage(options: any, trayImage: EditableTrayImage) {
 }
 
 async function save() {
+  if (!themeOptions.some((option) => option.value === form.miniprogram_theme_key)) {
+    return message.warning('请选择有效的小程序页面风格')
+  }
   for (const slide of slides.value) slide.image = normalizeSlideImage(slide.image)
   if (slides.value.some((slide) => !slide.image)) {
     return message.warning('每条轮播都必须填写图片地址或上传图片')
@@ -1020,6 +1137,85 @@ onMounted(() => {
 .asset-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .asset-grid :deep(.ant-form-item) { min-width: 0; margin-bottom: 0; }
 .form-grid__wide { grid-column: 1 / -1; }
+.theme-switcher {
+  padding: 20px;
+  border: 1px solid #e1e9e5;
+  border-radius: 14px;
+  background: #f7faf8;
+}
+.theme-switcher__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+.theme-switcher__heading > div > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #879991;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .15em;
+}
+.theme-switcher__heading h3 { margin: 0; color: #244a3e; font: 700 20px Georgia, 'Noto Serif SC', serif; }
+.theme-switcher__heading p { margin: 5px 0 0; color: #7f8d88; font-size: 12px; }
+.theme-switcher__status {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #5d776e;
+  background: #e8f0ec;
+  font-size: 11px;
+  font-weight: 600;
+}
+.theme-switcher__status.is-dirty { color: #9a6b2f; background: #f7ead4; }
+.theme-choice-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  padding: 1px;
+}
+.theme-choice {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 118px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e0e7e3;
+  border-radius: 11px;
+  color: #374640;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease;
+}
+.theme-choice__swatches {
+  display: grid;
+  height: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 45, 40, .1);
+  border-radius: 7px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.theme-choice__swatches i { display: block; }
+.theme-choice__title { padding-right: 16px; font-size: 12px; font-weight: 700; line-height: 1.4; }
+.theme-choice__selected { position: absolute; top: 39px; right: 8px; display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: #fff; background: #607d76; font-size: 10px; }
+.theme-choice small { display: -webkit-box; overflow: hidden; color: #84908c; font-size: 10px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.theme-choice.is-selected {
+  border-color: #6f8f86;
+  background: #fbfdfc;
+  box-shadow: 0 0 0 1px rgba(96, 125, 118, .22), 0 8px 20px rgba(66, 87, 79, .08);
+}
+.theme-choice:focus-visible { outline: 3px solid rgba(96, 125, 118, .2); outline-offset: 2px; }
+.theme-choice:active { transform: scale(.985); }
+@media (hover: hover) {
+  .theme-choice:hover { border-color: #9ab0a8; background: #fcfdfc; }
+}
+.theme-preset-notice { margin-top: 12px; }
 .contact-qr-list { display: flex; max-width: 760px; flex-direction: column; gap: 12px; }
 .contact-qr-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5ece8; border-radius: 12px; background: #fafcfb; }
 .contact-qr-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: #557067; background: #eaf2ee; font-size: 12px; font-weight: 700; }
@@ -1045,9 +1241,14 @@ onMounted(() => {
 .refund-reason-order { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #577067; background: #edf4f1; font-size: 12px; font-weight: 700; }
 @media (max-width: 850px) {
   .asset-grid--two { grid-template-columns: 1fr; }
+  .theme-switcher { padding: 16px; }
+  .theme-switcher__heading { gap: 14px; }
   .settings-tabs { flex-direction: column; }
   .settings-tabs :deep(.ant-tabs-nav) { width: 100%; margin: 0; padding: 8px; border-right: 0; }
   .settings-tabs :deep(.ant-tabs-nav-list) { overflow: auto; }
   .settings-tabs :deep(.ant-tabs-content-holder) { padding: 18px; }
+}
+@media (max-width: 600px) {
+  .theme-choice-row { overflow-x: auto; grid-template-columns: repeat(6, 108px); padding-bottom: 5px; scrollbar-width: thin; }
 }
 </style>
