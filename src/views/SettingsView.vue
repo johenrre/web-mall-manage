@@ -694,6 +694,12 @@ const themeOptions: ThemeOption[] = [
   { value: 'cream-french', label: '奶油法式风', description: '奶油白、香槟灰粉与柔和旧金，温柔精致。', colors: ['#f7f1e8', '#fffaf3', '#9a7d6c', '#c68f8b', '#51453f'] },
   { value: 'forest-mineral', label: '森系矿石风', description: '苔绿、木色与矿物铁锈色，自然沉静。', colors: ['#eef1ea', '#f8f7f0', '#4e6b58', '#aa7762', '#2f3b33'] },
   { value: 'midnight-astrolabe', label: '暗夜星盘风', description: '午夜蓝、月光银蓝与旧金，深邃但不霓虹。', colors: ['#0e1422', '#151d2c', '#8fa8c7', '#c7a66b', '#f2eadb'] },
+  { value: 'japanese-wabi-sabi', label: '日系侘寂风', description: '砂岩、亚麻与苔灰绿，保留自然留下的不完美。', colors: ['#e9e2d7', '#f7f2e9', '#746f60', '#9ca18a', '#b68472'] },
+  { value: 'aegean-sea-salt', label: '海盐地中海风', description: '海盐白、爱琴海蓝与赤陶橙，清爽明亮。', colors: ['#eef3f1', '#fcfbf6', '#3d7488', '#7fb6ae', '#c57e64'] },
+  { value: 'desert-terracotta', label: '沙丘赤陶风', description: '沙丘米、赤陶棕与鼠尾草绿，温暖而自由。', colors: ['#f3e8d9', '#fcf6ec', '#a35f45', '#8fa18a', '#c9785b'] },
+  { value: 'moonlit-pearl', label: '月光珍珠风', description: '珍珠白、雾紫与贝母粉，柔和通透。', colors: ['#f2f0f3', '#fcfafc', '#7d748b', '#a7c6c0', '#c5a5b5'] },
+  { value: 'morandi-gallery', label: '莫兰迪画廊风', description: '灰蓝、灰粉与鼠尾草绿，像安静的艺术展陈。', colors: ['#ecebe7', '#f8f7f3', '#6f7784', '#94aaa0', '#b88380'] },
+  { value: 'monochrome-museum', label: '黑白博物馆风', description: '象牙白、石墨灰与低彩材质色，克制现代。', colors: ['#ececea', '#fafaf7', '#4f5759', '#9aa6a3', '#9b7b72'] },
 ]
 const contact = reactive({ wechatId: '' })
 const contactQrs = ref<EditableContactQr[]>([])
@@ -1385,6 +1391,6 @@ onMounted(() => {
   .settings-tabs :deep(.ant-tabs-content-holder) { padding: 18px; }
 }
 @media (max-width: 600px) {
-  .theme-choice-row { overflow-x: auto; grid-template-columns: repeat(6, 108px); padding-bottom: 5px; scrollbar-width: thin; }
+  .theme-choice-row { overflow-x: auto; grid-template-columns: repeat(12, 108px); padding-bottom: 5px; scrollbar-width: thin; }
 }
 </style>

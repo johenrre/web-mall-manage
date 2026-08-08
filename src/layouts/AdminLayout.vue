@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Modal } from 'ant-design-vue'
+import { Modal, notification } from 'ant-design-vue'
 import {
   AppstoreOutlined, BarChartOutlined, BgColorsOutlined, CloudServerOutlined,
   DownOutlined, KeyOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
@@ -73,6 +73,11 @@ import BrandLogo from '@/components/BrandLogo.vue'
 import { get } from '@/api/http'
 import { useAuth } from '@/stores/auth'
 import { useBranding } from '@/stores/branding'
+import {
+  playOrderNotificationSound,
+  releaseOrderNotificationSound,
+  unlockOrderNotificationSound,
+} from '@/services/order-notification-sound'
 
 const route = useRoute()
 const router = useRouter()
@@ -83,7 +88,11 @@ const collapsed = ref(window.innerWidth < 1100)
 const passwordOpen = ref(false)
 const refreshId = ref(0)
 const notifications = ref({ paidPendingShipCount: 0 })
-let timer: number | undefined
+let notificationTimer: number | undefined
+let orderTimer: number | undefined
+
+const ORDER_POLL_INTERVAL_MS = 3 * 60 * 1000
+const ORDER_CACHE_LIMIT = 500
 
 const initials = computed(() => (auth.state.user?.nickname || auth.state.user?.username || '管').slice(0, 1).toUpperCase())
 const roleLabel = computed(() => auth.state.user?.role_name || (auth.isSuperAdmin.value ? '超级管理员' : '业务账号'))
@@ -160,6 +169,62 @@ async function loadNotifications() {
   try { notifications.value = await get('/api/admin/notifications_summary') } catch { /* 登录态拦截器负责处理 */ }
 }
 
+function orderCacheKey() {
+  return `admin_seen_order_ids_v1:${auth.state.user?.id || 'unknown'}`
+}
+
+function orderIdentity(order: Record<string, unknown>) {
+  return String(order.order_no || order.id || '').trim()
+}
+
+function readCachedOrderIds(key: string): string[] | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw === null) return null
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? parsed.map((item) => String(item)).filter(Boolean) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedOrderIds(key: string, ids: string[]) {
+  try { localStorage.setItem(key, JSON.stringify(ids.slice(0, ORDER_CACHE_LIMIT))) } catch { /* 缓存不可用时不影响后台 */ }
+}
+
+async function checkNewOrders() {
+  if (!auth.can('orders')) return
+  try {
+    const data: any = await get('/api/order/list', { page: 1, pageSize: 100, admin: true })
+    const orders = Array.isArray(data?.list) ? data.list as Array<Record<string, unknown>> : []
+    const currentIds = orders.map(orderIdentity).filter(Boolean)
+    const key = orderCacheKey()
+    const cachedIds = readCachedOrderIds(key)
+    const cachedSet = new Set(cachedIds || [])
+    const newOrders = cachedIds === null
+      ? []
+      : orders.filter((order) => {
+        const id = orderIdentity(order)
+        return id && !cachedSet.has(id)
+      })
+
+    writeCachedOrderIds(key, [...new Set([...currentIds, ...(cachedIds || [])])])
+    if (newOrders.length === 0) return
+
+    playOrderNotificationSound()
+    notification.open({
+      message: '有新订单',
+      description: `发现 ${newOrders.length} 笔新订单，点击查看订单管理。`,
+      placement: 'bottomRight',
+      duration: 10,
+      onClick: () => { void router.push({ name: 'orders' }) },
+    })
+    void loadNotifications()
+  } catch {
+    // 轮询失败不打扰当前操作，下一轮自动重试。
+  }
+}
+
 function confirmLogout() {
   Modal.confirm({
     title: '确认退出登录？',
@@ -178,12 +243,20 @@ async function afterPasswordChanged() {
 
 onMounted(() => {
   void loadNotifications()
-  timer = window.setInterval(loadNotifications, 20_000)
+  void checkNewOrders()
+  notificationTimer = window.setInterval(loadNotifications, 20_000)
+  orderTimer = window.setInterval(checkNewOrders, ORDER_POLL_INTERVAL_MS)
+  window.addEventListener('pointerdown', unlockOrderNotificationSound, { once: true })
+  window.addEventListener('keydown', unlockOrderNotificationSound, { once: true })
   window.addEventListener('resize', handleResize)
 })
 onBeforeUnmount(() => {
-  if (timer) window.clearInterval(timer)
+  if (notificationTimer) window.clearInterval(notificationTimer)
+  if (orderTimer) window.clearInterval(orderTimer)
+  window.removeEventListener('pointerdown', unlockOrderNotificationSound)
+  window.removeEventListener('keydown', unlockOrderNotificationSound)
   window.removeEventListener('resize', handleResize)
+  releaseOrderNotificationSound()
 })
 </script>
 

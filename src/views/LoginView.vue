@@ -49,6 +49,7 @@ import { errorMessage } from '@/api/http'
 import { useAuth } from '@/stores/auth'
 import { useBranding } from '@/stores/branding'
 import BrandLogo from '@/components/BrandLogo.vue'
+import { unlockOrderNotificationSound } from '@/services/order-notification-sound'
 
 const route = useRoute()
 const router = useRouter()
@@ -58,6 +59,7 @@ const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
 async function submit() {
+  unlockOrderNotificationSound()
   loading.value = true
   try {
     await auth.login(form.username.trim(), form.password)
