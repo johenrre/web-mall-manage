@@ -43,7 +43,7 @@ import { dateTime, listFrom, resolveMedia, totalFrom } from '@/utils/format'
 
 const columns = [
   { title:'用户', key:'user', width:260 }, { title:'ID', dataIndex:'id', width:90 },
-  { title:'手机号', key:'phone', width:150 }, { title:'订单数', dataIndex:'order_count', width:110 },
+  { title:'手机号', key:'phone', width:150 }, { title:'成交订单', dataIndex:'order_count', width:110 },
   { title:'注册时间', key:'created_at', width:180 }, { title:'操作', key:'action', width:140, fixed:'right' as const },
 ]
 const loading = ref(false), saving = ref(false), editOpen = ref(false)
