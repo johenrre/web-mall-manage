@@ -76,7 +76,7 @@
                 message="主题颜色、配套图片和主题文案已填入当前表单，尚未生效"
                 description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码、音乐和业务数据不会被替换。"
               />
-              <div class="field-help">每套风格包含 16 张配套图片（含启动加载页背景）、4 组轮播文案和 1 组分享展示文案；再次点击当前风格可恢复完整预设。</div>
+              <div class="field-help">主题会带入已有的配套图片和文案；暂未制作的主题资源会保持为空，不会误用其他风格图片。再次点击当前风格可恢复预设。</div>
             </section>
 
             <div class="setting-area-heading setting-area-heading--first">
@@ -343,6 +343,14 @@
                 </template>
               </a-table>
               <div class="field-help">建议上传正方形 JPG 或 PNG，主体居中且四周留白；列表为空时小程序自动使用内置珠盘图。</div>
+            </section>
+
+            <section class="setting-section">
+              <h3 class="setting-section-title">手围测量示意图</h3>
+              <a-form-item label="测量方法图">
+                <ImageUploader data-testid="wrist-measurement-uploader" v-model="form.miniprogram_wrist_measurement_image" />
+                <div class="field-help">用于“使用指南－手围测量”，小程序会按图片宽度完整展示。建议上传约 1200 × 2100 的竖向 JPG 或 WebP，并保证文字和表格清晰可读。</div>
+              </a-form-item>
             </section>
 
             <section class="setting-section">
@@ -758,6 +766,7 @@ const stringKeys = [
   'miniprogram_theme_key',
   'miniprogram_launch_background_image',
   'site_title_logo_image',
+  'miniprogram_wrist_measurement_image',
   'miniprogram_home_process_image',
   'miniprogram_home_activity_image',
   'miniprogram_customer_service_float_image',
@@ -984,6 +993,7 @@ function handleThemeChange(value: unknown): void {
   form.miniprogram_theme_key = value
   form.site_title_logo_image = preset.siteTitleLogoImage
   form.miniprogram_launch_background_image = preset.launchBackgroundImage
+  form.miniprogram_wrist_measurement_image = preset.wristMeasurementImage
   form.miniprogram_customer_service_float_image = preset.customerServiceFloatImage
   form.miniprogram_home_process_image = preset.homeProcessImage
   form.miniprogram_home_activity_image = preset.homeActivityImage
