@@ -92,6 +92,16 @@
               <a-form-item label="小程序名称">
                 <a-input v-model:value="form.miniprogram_name" placeholder="显示在小程序首页的名称" />
               </a-form-item>
+              <div class="form-grid">
+                <a-form-item label="首页默认用户名称">
+                  <a-input v-model:value="form.miniprogram_home_identity_name" :maxlength="12" show-count placeholder="例如：御石灵友" />
+                  <div class="field-help">用户未登录或未设置有效昵称时，首页个人入口显示此名称。</div>
+                </a-form-item>
+                <a-form-item label="DIY 页面标题">
+                  <a-input v-model:value="form.miniprogram_diy_page_title" :maxlength="12" show-count placeholder="例如：晶石实验室" />
+                  <div class="field-help">显示在 DIY 编辑页顶部居中位置。</div>
+                </a-form-item>
+              </div>
               <a-form-item label="小程序 Logo / 默认头像">
                 <ImageUploader v-model="form.site_title_logo_image" />
                 <div class="field-help">用于小程序品牌标识；用户没有设置头像时也显示这张图。</div>
@@ -763,6 +773,8 @@ const stringKeys = [
   'miniprogram_app_id',
   'miniprogram_app_secret',
   'miniprogram_name',
+  'miniprogram_home_identity_name',
+  'miniprogram_diy_page_title',
   'miniprogram_theme_key',
   'miniprogram_launch_background_image',
   'site_title_logo_image',
@@ -1203,6 +1215,13 @@ async function uploadPurchaseNoticeImage(options: any, item: EditablePurchaseNot
 }
 
 async function save() {
+  const homeIdentityName = text(form.miniprogram_home_identity_name)
+  const diyPageTitle = text(form.miniprogram_diy_page_title)
+  if (!homeIdentityName) return message.warning('请填写首页默认用户名称')
+  if (!diyPageTitle) return message.warning('请填写 DIY 页面标题')
+  if (homeIdentityName.length > 12 || diyPageTitle.length > 12) {
+    return message.warning('页面显示文案不能超过 12 个字符')
+  }
   if (!themeOptions.some((option) => option.value === form.miniprogram_theme_key)) {
     return message.warning('请选择有效的小程序页面风格')
   }
