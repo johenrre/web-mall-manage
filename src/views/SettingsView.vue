@@ -255,6 +255,67 @@
                 <ImageUploader v-model="form.miniprogram_home_activity_image" />
                 <div class="field-help">首页活动卡片、活动详情页顶部和微信分享封面共用；未配置时不显示图片。</div>
               </a-form-item>
+
+              <div class="activity-config-block">
+                <div class="section-toolbar">
+                  <div>
+                    <h3 class="setting-section-title">奖励阶梯</h3>
+                    <p>每档只配置点赞数、播放量和累计奖励；小程序自动补充单位与千分位。</p>
+                  </div>
+                  <a-button type="primary" ghost :disabled="activityRewardTiers.length >= 10" @click="addActivityRewardTier">
+                    <PlusOutlined /> 添加阶梯
+                  </a-button>
+                </div>
+                <div class="activity-config-list">
+                  <div v-for="(item, index) in activityRewardTiers" :key="item.rowKey" class="activity-reward-config-row">
+                    <div class="activity-config-order">{{ String(index + 1).padStart(2, '0') }}</div>
+                    <a-form-item label="点赞数">
+                      <a-input-number v-model:value="item.likes" :min="1" :precision="0" :controls="false" placeholder="例如 30" />
+                    </a-form-item>
+                    <a-form-item label="播放量">
+                      <a-input-number v-model:value="item.views" :min="1" :precision="0" :controls="false" placeholder="例如 1000" />
+                    </a-form-item>
+                    <a-form-item label="累计奖励（元）">
+                      <a-input-number v-model:value="item.reward" :min="1" :precision="0" :controls="false" placeholder="例如 10" />
+                    </a-form-item>
+                    <a-space class="activity-config-actions">
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveActivityRewardTier(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === activityRewardTiers.length - 1" title="下移" @click="moveActivityRewardTier(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger :disabled="activityRewardTiers.length <= 1" title="删除" @click="removeActivityRewardTier(index)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </div>
+                </div>
+              </div>
+
+              <div class="activity-config-block">
+                <div class="section-toolbar">
+                  <div>
+                    <h3 class="setting-section-title">发布要求</h3>
+                    <p>每项仅展示标题和说明，顺序与这里保持一致。</p>
+                  </div>
+                  <a-button type="primary" ghost :disabled="activityRequirements.length >= 10" @click="addActivityRequirement">
+                    <PlusOutlined /> 添加要求
+                  </a-button>
+                </div>
+                <div class="activity-config-list">
+                  <div v-for="(item, index) in activityRequirements" :key="item.rowKey" class="activity-requirement-config-row">
+                    <div class="activity-config-order">{{ String(index + 1).padStart(2, '0') }}</div>
+                    <div class="activity-requirement-fields">
+                      <a-form-item label="标题">
+                        <a-input v-model:value="item.title" :maxlength="30" show-count placeholder="例如：完整记录创作过程" />
+                      </a-form-item>
+                      <a-form-item label="说明">
+                        <a-textarea v-model:value="item.description" :maxlength="300" show-count :auto-size="{ minRows: 2, maxRows: 5 }" placeholder="填写这一项的具体要求" />
+                      </a-form-item>
+                    </div>
+                    <a-space class="activity-config-actions">
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveActivityRequirement(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === activityRequirements.length - 1" title="下移" @click="moveActivityRequirement(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger :disabled="activityRequirements.length <= 1" title="删除" @click="removeActivityRequirement(index)"><DeleteOutlined /></a-button>
+                    </a-space>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section class="setting-section">
@@ -680,6 +741,19 @@ interface EditableContactQr {
   image: string
 }
 
+interface EditableActivityRewardTier {
+  rowKey: string
+  likes: number | null
+  views: number | null
+  reward: number | null
+}
+
+interface EditableActivityRequirement {
+  rowKey: string
+  title: string
+  description: string
+}
+
 interface StorageStatus {
   provider: 'oss' | 'local'
   oss: {
@@ -728,6 +802,8 @@ const contactQrs = ref<EditableContactQr[]>([])
 const slides = ref<EditableHomeSlide[]>([])
 const trayImages = ref<EditableTrayImage[]>([])
 const purchaseNoticeImages = ref<EditablePurchaseNoticeImage[]>([])
+const activityRewardTiers = ref<EditableActivityRewardTier[]>([])
+const activityRequirements = ref<EditableActivityRequirement[]>([])
 const refundReasons = ref<string[]>([])
 const mainEntrySlots = ref<EditableImageSlot[]>([
   { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
@@ -743,6 +819,21 @@ let slideSequence = 0
 let trayImageSequence = 0
 let purchaseNoticeImageSequence = 0
 let contactQrSequence = 0
+let activityRewardTierSequence = 0
+let activityRequirementSequence = 0
+
+const defaultActivityRewardTiers = [
+  { likes: 30, views: 1000, reward: 10 },
+  { likes: 100, views: 10000, reward: 80 },
+  { likes: 1000, views: 100000, reward: 1000 },
+  { likes: 10000, views: 1000000, reward: 10000 },
+]
+
+const defaultActivityRequirements = [
+  { title: '完整记录创作过程', description: '在 DIY 设计页录制 12～25 秒视频，或整理为图文。建议剪去等待片段，保留选珠、调整和成串的关键过程；画面清晰、款式完整，并露出小程序品牌标记。' },
+  { title: '零粉也可以参与', description: '活动不设粉丝门槛。小红书、抖音或视频号均可发布，以平台可核验的公开数据为准。' },
+  { title: '添加活动相关标签', description: '发布时至少带 3 个相关标签，方便客服核验活动作品。' },
+]
 
 const slideColumns = [
   { title: '主图', key: 'image', width: 310 },
@@ -830,6 +921,67 @@ function normalizeSlideImage(value: unknown): string {
 
 function boolValue(value: unknown): boolean {
   return value === true || value === 1 || value === '1' || value === 'true'
+}
+
+function positiveIntegerOrNull(value: unknown): number | null {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+function createActivityRewardTier(source: any = {}): EditableActivityRewardTier {
+  activityRewardTierSequence += 1
+  return {
+    rowKey: `activity-reward-tier-${activityRewardTierSequence}`,
+    likes: positiveIntegerOrNull(source.likes),
+    views: positiveIntegerOrNull(source.views),
+    reward: positiveIntegerOrNull(source.reward),
+  }
+}
+
+function parseActivityRewardTiers(value: unknown): EditableActivityRewardTier[] {
+  try {
+    const parsed = JSON.parse(text(value) || '[]')
+    const source = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultActivityRewardTiers
+    return source.slice(0, 10).map(createActivityRewardTier)
+  } catch {
+    message.error('数据库中的灵感分享奖励阶梯格式错误，已显示默认内容')
+    return defaultActivityRewardTiers.map(createActivityRewardTier)
+  }
+}
+
+function serializeActivityRewardTiers(): string {
+  return JSON.stringify(activityRewardTiers.value.map((item) => ({
+    likes: Number(item.likes),
+    views: Number(item.views),
+    reward: Number(item.reward),
+  })))
+}
+
+function createActivityRequirement(source: any = {}): EditableActivityRequirement {
+  activityRequirementSequence += 1
+  return {
+    rowKey: `activity-requirement-${activityRequirementSequence}`,
+    title: text(source.title),
+    description: text(source.description || source.desc),
+  }
+}
+
+function parseActivityRequirements(value: unknown): EditableActivityRequirement[] {
+  try {
+    const parsed = JSON.parse(text(value) || '[]')
+    const source = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultActivityRequirements
+    return source.slice(0, 10).map(createActivityRequirement)
+  } catch {
+    message.error('数据库中的灵感分享发布要求格式错误，已显示默认内容')
+    return defaultActivityRequirements.map(createActivityRequirement)
+  }
+}
+
+function serializeActivityRequirements(): string {
+  return JSON.stringify(activityRequirements.value.map((item) => ({
+    title: text(item.title),
+    description: text(item.description),
+  })))
 }
 
 function createSlide(source: any = {}): EditableHomeSlide {
@@ -1057,6 +1209,8 @@ async function load() {
     slides.value = parseSlides(data.miniprogram_home_slides_json)
     trayImages.value = parseTrayImages(data.miniprogram_diy_tray_images_json)
     purchaseNoticeImages.value = parsePurchaseNoticeImages(data.miniprogram_purchase_notice_images_json)
+    activityRewardTiers.value = parseActivityRewardTiers(data.miniprogram_activity_reward_tiers_json)
+    activityRequirements.value = parseActivityRequirements(data.miniprogram_activity_requirements_json)
     try {
       const parsed = JSON.parse(String(data.miniprogram_refund_reasons_json || '[]'))
       refundReasons.value = Array.isArray(parsed) ? parsed.map((item) => text(item)).filter(Boolean).slice(0, 10) : []
@@ -1138,6 +1292,40 @@ function addContactQr() {
 
 function removeContactQr(rowKey: string) {
   contactQrs.value = contactQrs.value.filter((item) => item.rowKey !== rowKey)
+}
+
+function addActivityRewardTier() {
+  if (activityRewardTiers.value.length >= 10) return message.warning('奖励阶梯最多配置 10 档')
+  activityRewardTiers.value.push(createActivityRewardTier())
+}
+
+function moveActivityRewardTier(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= activityRewardTiers.value.length) return
+  const [item] = activityRewardTiers.value.splice(index, 1)
+  if (item) activityRewardTiers.value.splice(target, 0, item)
+}
+
+function removeActivityRewardTier(index: number) {
+  if (activityRewardTiers.value.length <= 1) return message.warning('至少保留一档奖励')
+  activityRewardTiers.value.splice(index, 1)
+}
+
+function addActivityRequirement() {
+  if (activityRequirements.value.length >= 10) return message.warning('发布要求最多配置 10 项')
+  activityRequirements.value.push(createActivityRequirement())
+}
+
+function moveActivityRequirement(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= activityRequirements.value.length) return
+  const [item] = activityRequirements.value.splice(index, 1)
+  if (item) activityRequirements.value.splice(target, 0, item)
+}
+
+function removeActivityRequirement(index: number) {
+  if (activityRequirements.value.length <= 1) return message.warning('至少保留一项发布要求')
+  activityRequirements.value.splice(index, 1)
 }
 
 function addRefundReason() {
@@ -1245,6 +1433,34 @@ async function save() {
     return message.warning('请上传客服二维码，或删除未填写的二维码项')
   }
   if (contactQrs.value.length > 10) return message.warning('客服二维码最多配置 10 个')
+  if (activityRewardTiers.value.length < 1 || activityRewardTiers.value.length > 10) {
+    return message.warning('奖励阶梯需要配置 1 至 10 档')
+  }
+  for (let index = 0; index < activityRewardTiers.value.length; index += 1) {
+    const item = activityRewardTiers.value[index]
+    if (!item || !Number.isInteger(item.likes) || !Number.isInteger(item.views) || !Number.isInteger(item.reward)
+      || Number(item.likes) <= 0 || Number(item.views) <= 0 || Number(item.reward) <= 0) {
+      return message.warning(`奖励阶梯第 ${index + 1} 档的三个数字都必须是正整数`)
+    }
+    const previous = activityRewardTiers.value[index - 1]
+    if (previous && (Number(item.likes) <= Number(previous.likes) || Number(item.views) <= Number(previous.views))) {
+      return message.warning(`奖励阶梯第 ${index + 1} 档的点赞数和播放量必须高于上一档`)
+    }
+    if (previous && Number(item.reward) < Number(previous.reward)) {
+      return message.warning(`奖励阶梯第 ${index + 1} 档的奖励不能低于上一档`)
+    }
+  }
+  if (activityRequirements.value.length < 1 || activityRequirements.value.length > 10) {
+    return message.warning('发布要求需要配置 1 至 10 项')
+  }
+  for (let index = 0; index < activityRequirements.value.length; index += 1) {
+    const item = activityRequirements.value[index]
+    const title = text(item?.title)
+    const description = text(item?.description)
+    if (!title || !description) return message.warning(`发布要求第 ${index + 1} 项的标题和说明不能为空`)
+    if (title.length > 30) return message.warning(`发布要求第 ${index + 1} 项的标题不能超过 30 个字符`)
+    if (description.length > 300) return message.warning(`发布要求第 ${index + 1} 项的说明不能超过 300 个字符`)
+  }
   const normalizedRefundReasons = refundReasons.value.map((reason) => text(reason))
   if (normalizedRefundReasons.some((reason) => !reason)) return message.warning('售后原因不能为空')
   if (normalizedRefundReasons.some((reason) => reason.length > 20)) return message.warning('每条售后原因不能超过 20 个字符')
@@ -1264,6 +1480,8 @@ async function save() {
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
     miniprogram_diy_tray_images_json: serializeTrayImages(),
     miniprogram_purchase_notice_images_json: serializePurchaseNoticeImages(),
+    miniprogram_activity_reward_tiers_json: serializeActivityRewardTiers(),
+    miniprogram_activity_requirements_json: serializeActivityRequirements(),
     miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
     kuaidi100_cache_minutes: kuaidi100CacheMinutes,
   }
@@ -1414,6 +1632,17 @@ onMounted(() => {
 .refund-reason-list { display: flex; max-width: 720px; flex-direction: column; gap: 10px; }
 .refund-reason-row { display: grid; grid-template-columns: 28px minmax(220px, 1fr) auto; align-items: center; gap: 10px; }
 .refund-reason-order { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #577067; background: #edf4f1; font-size: 12px; font-weight: 700; }
+.activity-config-block { margin-top: 24px; padding-top: 22px; border-top: 1px solid #e7edea; }
+.activity-config-list { display: flex; flex-direction: column; gap: 10px; }
+.activity-reward-config-row,
+.activity-requirement-config-row { display: grid; align-items: end; gap: 12px; padding: 14px; border: 1px solid #e3ebe7; border-radius: 12px; background: #fafcfb; }
+.activity-reward-config-row { grid-template-columns: 36px repeat(3, minmax(130px, 1fr)) auto; }
+.activity-requirement-config-row { grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; }
+.activity-config-order { display: grid; width: 36px; height: 36px; align-self: center; place-items: center; border-radius: 10px; color: #557067; background: #eaf2ee; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+.activity-config-list :deep(.ant-form-item) { min-width: 0; margin-bottom: 0; }
+.activity-config-list :deep(.ant-input-number) { width: 100%; }
+.activity-requirement-fields { display: grid; min-width: 0; grid-template-columns: minmax(180px, .7fr) minmax(280px, 1.5fr); gap: 14px; }
+.activity-config-actions { align-self: center; }
 @media (max-width: 850px) {
   .asset-grid--two { grid-template-columns: 1fr; }
   .theme-switcher { padding: 16px; }
@@ -1422,6 +1651,10 @@ onMounted(() => {
   .settings-tabs :deep(.ant-tabs-nav) { width: 100%; margin: 0; padding: 8px; border-right: 0; }
   .settings-tabs :deep(.ant-tabs-nav-list) { overflow: auto; }
   .settings-tabs :deep(.ant-tabs-content-holder) { padding: 18px; }
+  .activity-reward-config-row { grid-template-columns: 36px repeat(3, minmax(100px, 1fr)); }
+  .activity-requirement-config-row { grid-template-columns: 36px minmax(0, 1fr); }
+  .activity-config-actions { grid-column: 2 / -1; justify-self: end; }
+  .activity-requirement-fields { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .theme-choice-row { overflow-x: auto; grid-template-columns: repeat(12, 108px); padding-bottom: 5px; scrollbar-width: thin; }
