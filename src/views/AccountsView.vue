@@ -39,7 +39,7 @@
                 <div class="account-title">
                   <b>{{ record.nickname || record.username }}</b>
                   <a-tag v-if="record.is_builtin" color="gold">默认管理员</a-tag>
-                  <a-tag v-if="record.user_id === auth.state.user?.id" color="green">当前账号</a-tag>
+                  <a-tag v-if="record.id === auth.state.user?.id" color="green">当前账号</a-tag>
                 </div>
                 <div class="muted mono">@{{ record.username }}</div>
               </div>
@@ -66,7 +66,7 @@
               <a-button
                 type="link"
                 size="small"
-                :disabled="record.user_id === auth.state.user?.id"
+                :disabled="record.id === auth.state.user?.id"
                 @click="openReset(record)"
               >
                 重置密码
@@ -75,7 +75,7 @@
                 type="link"
                 size="small"
                 danger
-                :disabled="record.is_builtin || record.user_id === auth.state.user?.id"
+                :disabled="record.is_builtin || record.id === auth.state.user?.id"
                 @click="remove(record)"
               >
                 删除
@@ -189,7 +189,6 @@ interface AdminRole {
 
 interface Account {
   id: number
-  user_id: number
   username: string
   nickname?: string
   avatar?: string
@@ -315,7 +314,7 @@ function openEdit(account: Account) {
     nickname: account.nickname || '',
     role_id: account.role_id,
     status: account.status,
-    locked: account.is_builtin || account.user_id === auth.state.user?.id,
+    locked: account.is_builtin || account.id === auth.state.user?.id,
   })
   editOpen.value = true
 }
