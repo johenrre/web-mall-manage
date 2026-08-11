@@ -44,7 +44,7 @@
 
             <section class="card-info"><span class="block-label">收件信息</span><h4>{{ record.consignee||'未填写' }} <small class="mono">{{ record.phone||'—' }}</small></h4><p :title="record.address">{{ record.address||'未填写收货地址' }}</p></section>
 
-            <section class="card-fulfillment"><span class="block-label">制作与配送</span><p><i>制作</i>{{ optionText(record,'production',record.production_method) }}</p><p><i>包装</i>{{ optionText(record,'packaging',record.packaging_method) }}</p><p><i>绳线</i>{{ optionText(record,'rope',record.rope_color) }}</p><p><i>配送</i>{{ optionText(record,'express',record.express_method) }}</p><p v-if="record.greeting_card"><i>贺卡</i>{{ optionText(record,'greeting',record.greeting_card) }}</p><template v-if="record.express_no"><p><i>快递</i>{{ record.express_company||'未填写' }}</p><p class="card-tracking" :title="record.express_no"><i>单号</i><span class="mono">{{ record.express_no }}</span></p></template></section>
+            <section class="card-fulfillment"><span class="block-label">制作与配送</span><p><i>制作</i>{{ optionText(record,'production',record.production_method) }}</p><p><i>包装</i>{{ optionText(record,'packaging',record.packaging_method) }}</p><p><i>绳线</i>{{ optionText(record,'rope',record.rope_color) }}</p><p><i>配送</i>{{ optionText(record,'express',record.express_method) }}</p><p v-if="record.greeting_card"><i>贺卡</i>{{ optionText(record,'greeting',record.greeting_card) }}</p><template v-if="record.express_no"><p><i>快递</i>{{ record.express_company||'未填写' }}</p><p class="card-tracking" :title="record.express_no"><i>单号</i><span class="mono">{{ record.express_no }}</span></p></template><p class="card-buyer-remark" :title="record.remark||'暂无买家备注'"><i>买家备注</i><span :class="{'is-empty':!record.remark}">{{ record.remark||'暂无' }}</span></p></section>
 
             <section class="card-settlement">
               <span class="block-label">订单金额</span>
@@ -182,7 +182,7 @@
       </a-form>
       <small v-if="internalNoteTarget?.internal_note_updated_at" class="internal-note__updated">上次更新：{{ dateTime(internalNoteTarget.internal_note_updated_at) }}</small>
     </a-modal>
-    <a-modal v-model:open="checklistOpen" title="商品与备料完整清单" :footer="null" :width="980" :z-index="1250" centered>
+    <a-modal v-model:open="checklistOpen" title="商品与备料完整清单" :footer="null" :width="1280" :z-index="1250" centered>
       <div v-if="selected" class="checklist-stack">
         <section class="products-panel checklist-section">
           <div class="section-heading">
@@ -212,13 +212,20 @@
             <div><h3>排列顺序 · {{ item.title||'DIY 定制手串' }}</h3><p>按照下单时的设计快照，从第 1 颗开始依次排列</p></div>
             <a-tag :bordered="false">{{ itemSequence(item).length }} 个位置</a-tag>
           </div>
-          <div v-if="itemSequence(item).length" class="sequence-scroll">
-            <div v-for="entry in itemSequence(item)" :key="`${entry.index}-${entry.id}`" class="sequence-item" :title="`${entry.name}${entry.size ? ` · ${entry.size}mm` : ''}`">
-              <span>{{ entry.index+1 }}</span>
-              <img v-if="entry.image" :src="resolveMedia(entry.image)" :alt="entry.name" />
-              <i v-else>{{ entry.name.slice(0,1)||'珠' }}</i>
-              <small>{{ entry.name }}</small>
-              <em>{{ entry.size ? `${entry.size} mm` : '未标尺寸' }}</em>
+          <div v-if="itemSequence(item).length" class="sequence-layout">
+            <div class="sequence-bracelet">
+              <BraceletPreview :pattern="itemPattern(item)" :material-map="itemMaterialMap(item)" :size="430" interactive @activate="openBraceletZoom(item)" />
+              <b>定制手串预览</b>
+              <small>点击手串可进一步放大查看</small>
+            </div>
+            <div class="sequence-scroll">
+              <div v-for="entry in itemSequence(item)" :key="`${entry.index}-${entry.id}`" class="sequence-item" :title="`${entry.name}${entry.size ? ` · ${entry.size}mm` : ''}`">
+                <span>{{ entry.index+1 }}</span>
+                <img v-if="entry.image" :src="resolveMedia(entry.image)" :alt="entry.name" />
+                <i v-else>{{ entry.name.slice(0,1)||'珠' }}</i>
+                <small>{{ entry.name }}</small>
+                <em>{{ entry.size ? `${entry.size} mm` : '未标尺寸' }}</em>
+              </div>
             </div>
           </div>
           <a-empty v-else description="本件商品没有排列数据" />
@@ -384,4 +391,12 @@ onMounted(load)
 @media(max-width:760px){.order-filter-toolbar{align-items:stretch;flex-direction:column}.flag-filter{overflow-x:auto;padding:2px 0;border-left:0}.order-card__header,.order-identity{align-items:flex-start}.order-identity{flex-direction:column;gap:2px}.order-card__body{grid-template-columns:1fr}.card-buyer,.card-info,.card-settlement{padding:12px 0 0;border-top:1px solid #edf1ef;border-left:0}.order-card__checklist,.detail-checklist-entry{align-items:flex-start;flex-direction:column}.order-card__checklist :deep(.ant-btn),.detail-checklist-entry :deep(.ant-btn){width:100%}.order-card__internal-note{grid-template-columns:26px minmax(0,1fr)}.internal-note__content{grid-template-columns:1fr}.internal-note__edit{grid-column:2;justify-self:start}}
 .order-card__internal-note{min-height:38px;align-items:center;padding:5px 14px}.internal-note__flag{height:28px;line-height:1}.internal-note__content{width:min(620px,100%);height:28px;grid-template-columns:56px minmax(0,1fr);align-items:center;gap:10px;overflow:hidden;padding-top:0}.internal-note__content b{display:block;line-height:28px}.internal-note__content span{display:block;min-width:0;overflow:hidden;line-height:28px;text-overflow:ellipsis;white-space:nowrap;word-break:normal}.internal-note__edit{align-self:center;height:28px!important}
 @media(max-width:760px){.order-card__internal-note{grid-template-columns:26px minmax(0,1fr) auto}.internal-note__content{width:100%;grid-template-columns:56px minmax(0,1fr)}.internal-note__edit{grid-column:auto;justify-self:auto}}
+.order-card__body{gap:18px;padding:13px 14px}.block-label{font-size:11px}.card-product-mini h3,.card-buyer h4,.card-info h4{font-size:14px}.card-product-mini p{font-size:11px;line-height:1.5}.card-products>small{font-size:10px}.buyer-phone{font-size:11px}.purchase-badge{font-size:10px;line-height:18px}.card-info h4 small{font-size:12px}.card-info p{font-size:12px;line-height:1.5}.card-fulfillment{gap:3px 10px}.card-fulfillment p{font-size:12px;line-height:21px}.card-fulfillment p i{width:36px;flex-basis:36px}.card-buyer-remark{grid-column:1/-1}.card-fulfillment .card-buyer-remark i{width:60px;flex-basis:60px}.card-buyer-remark span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.card-buyer-remark span.is-empty{color:#a1aaa6}.card-actions :deep(.ant-btn){font-size:11px}
+.order-card__body{grid-template-columns:minmax(200px,1fr) minmax(105px,.52fr) minmax(165px,.82fr) minmax(230px,1.15fr) 132px}
+@media(max-width:1250px){.order-card__body{grid-template-columns:minmax(230px,1.15fr) minmax(120px,.55fr) minmax(190px,.9fr) 142px}}
+@media(min-width:1051px) and (max-width:1250px){.order-card__body{grid-template-columns:minmax(200px,1fr) minmax(105px,.52fr) minmax(165px,.82fr) minmax(230px,1.15fr) 132px}.card-fulfillment{display:grid}}
+@media(max-width:760px){.order-card__body{grid-template-columns:1fr}}
+.sequence-scroll{display:grid;grid-template-columns:repeat(auto-fill,76px);justify-content:start;gap:8px;overflow:visible;padding:2px 1px 4px}.sequence-item{min-width:0}
+.sequence-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:24px}.sequence-bracelet{display:flex;min-height:470px;align-items:center;flex-direction:column;justify-content:center;padding:8px 14px 14px;border-right:1px solid #e5ece9;background:linear-gradient(145deg,#fbfcfa,#f3f7f4)}.sequence-bracelet b{margin-top:4px;color:#3f5d53;font-size:12px}.sequence-bracelet small{margin-top:3px;color:#94a19c;font-size:10px}.sequence-scroll{align-content:start;padding-top:8px}
+@media(max-width:1100px){.sequence-layout{grid-template-columns:1fr}.sequence-bracelet{border-right:0;border-bottom:1px solid #e5ece9}}
 </style>
