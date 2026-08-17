@@ -74,7 +74,7 @@
                 type="warning"
                 show-icon
                 message="主题颜色、配套图片和主题文案已填入当前表单，尚未生效"
-                description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码、音乐和业务数据不会被替换。"
+                description="请检查下方内容并点击“保存全部设置”。珠盘、客服二维码和业务数据不会被替换。"
               />
               <div class="field-help">主题会带入已有的配套图片和文案；暂未制作的主题资源会保持为空，不会误用其他风格图片。再次点击当前风格可恢复预设。</div>
             </section>
@@ -703,7 +703,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import AudioUploader from '@/components/AudioUploader.vue'
 import { errorMessage, get, post, uploadImage } from '@/api/http'
-import { isThemeKey, themeImagePresets, type ThemeKey } from '@/data/themeImagePresets'
+import { defaultHomeMusicUrl, isThemeKey, themeImagePresets, type ThemeKey } from '@/data/themeImagePresets'
 import { resolveMedia } from '@/utils/format'
 
 interface EditableHomeSlide {
@@ -1162,6 +1162,7 @@ function handleThemeChange(value: unknown): void {
   form.miniprogram_home_process_image = preset.homeProcessImage
   form.miniprogram_home_activity_image = preset.homeActivityImage
   form.miniprogram_mall_hero_image = preset.mallHeroImage
+  form.miniprogram_home_music_url = defaultHomeMusicUrl
   form.miniprogram_diy_showcase_eyebrow = preset.diyShowcaseCopy.eyebrow
   form.miniprogram_diy_showcase_title = preset.diyShowcaseCopy.title
   form.miniprogram_diy_showcase_description = preset.diyShowcaseCopy.description

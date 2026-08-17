@@ -36,21 +36,24 @@ export interface ThemeImagePreset {
   diyShowcaseCopy: ThemeSlideCopy
 }
 
+/** 页面风格共用的首页音乐；切换任意风格时一并恢复为 OSS 地址。 */
+export const defaultHomeMusicUrl = 'https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/audio/home/2026/08/home_music_1785522254303_7610f07c4ee4.mp3'
+
 /**
- * Theme image URLs are deliberately bundled into the management frontend.
- * Changing the theme only copies a preset into the unsaved settings form.
+ * 主题图片地址随管理后台发布。
+ * 切换主题只会把预设复制到尚未保存的设置表单中。
  */
 export const themeImagePresets = {
   "healing-ins": {
-    "siteTitleLogoImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
+    "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
     "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206803740_f8738a7bfb09.jpg",
     "wristMeasurementImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786256976367_34a0780fbd4b.jpg",
-    "customerServiceFloatImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
+    "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
     "slides": [
-      "https://rocking.synology.me:3000/uploads/images/assets/2026/07/image_1785080208447_131dfcaaffda.jpg",
-      "https://rocking.synology.me:3000/uploads/images/assets/2026/07/image_1785080213915_c61c6f955c3b.jpg",
-      "https://rocking.synology.me:3000/uploads/images/assets/2026/07/image_1785080217559_6026aa9add0d.jpg",
-      "https://rocking.synology.me:3000/uploads/images/assets/2026/07/image_1785080221014_113d6785a296.jpg"
+      "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/07/image_1785080208447_131dfcaaffda.jpg",
+      "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/07/image_1785080213915_c61c6f955c3b.jpg",
+      "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/07/image_1785080217559_6026aa9add0d.jpg",
+      "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/07/image_1785080221014_113d6785a296.jpg"
     ],
     "slideCopy": [
       { "eyebrow": "MORNING NOTE · 今日推荐", "title": "碰撞重构 色彩工坊", "description": "打通玻璃、金属与原石的材质边界，创作属于你的绚丽色彩。" },
@@ -59,16 +62,16 @@ export const themeImagePresets = {
       { "eyebrow": "GENTLE GROUND · 安定能量", "title": "稳稳地，回到自己", "description": "苔藓玛瑙与白水晶，把心安放在当下" }
     ],
     "mainEntries": {
-      "handcraft": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521381713_89642c08ee91.jpg",
-      "finished-style": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521392991_b277a9bece7d.jpg"
+      "handcraft": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521381713_89642c08ee91.jpg",
+      "finished-style": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521392991_b277a9bece7d.jpg"
     },
     "shortcuts": {
-      "inspiration-atlas": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521426333_508083da2fc9.jpg",
-      "cart": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521433743_2df872aa564f.jpg",
-      "orders": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521438736_9953c8fbafe9.jpg",
-      "my-designs": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521442278_d59f0820b7dc.jpg"
+      "inspiration-atlas": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521426333_508083da2fc9.jpg",
+      "cart": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521433743_2df872aa564f.jpg",
+      "orders": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521438736_9953c8fbafe9.jpg",
+      "my-designs": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521442278_d59f0820b7dc.jpg"
     },
-    "homeProcessImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
+    "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785862284008_03244be81498.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785862289295_101615b5d7f1.jpg",
     "diyShowcaseCopy": { "eyebrow": "MY CRYSTAL · 今日作品", "title": "把喜欢的光，串成日常", "description": "一串一念，留住此刻的温柔。" }
@@ -362,10 +365,10 @@ export const themeImagePresets = {
     "diyShowcaseCopy": { "eyebrow": "PEARL MOON · 今日作品", "title": "把温柔月色，戴在腕间", "description": "珠光轻落，陪你安静闪耀。" }
   },
   "morandi-gallery": {
-    "siteTitleLogoImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
+    "siteTitleLogoImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521471209_fa3abaaa8cb4.jpg",
     "launchBackgroundImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786206831370_b698381fdb3a.jpg",
     "wristMeasurementImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786257091427_797a9c593e08.jpg",
-    "customerServiceFloatImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
+    "customerServiceFloatImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521475208_fb8361dacbd3.png",
     "slides": [
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198984404_ab620d3a704e.jpg",
       "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198985204_d75debb5ed73.jpg",
@@ -388,7 +391,7 @@ export const themeImagePresets = {
       "orders": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198990348_c0ab06e9b5ec.jpg",
       "my-designs": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198991211_f5374288966d.jpg"
     },
-    "homeProcessImage": "https://rocking.synology.me:3000/uploads/images/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
+    "homeProcessImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1785521455560_23ae9a8ac960.jpg",
     "homeActivityImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198991932_8ae15247fb02.jpg",
     "mallHeroImage": "https://yunxiyue-miniapp-v2.oss-cn-heyuan.aliyuncs.com/diy/assets/2026/08/image_1786198992660_1e8a57f1ff43.jpg",
     "diyShowcaseCopy": { "eyebrow": "MORANDI GALLERY · 今日作品", "title": "让克制色彩，讲述你的灵感", "description": "低饱和的每一颗，都有自己的情绪。" }
