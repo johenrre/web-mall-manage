@@ -95,6 +95,9 @@ Desktop.ini
 # Rollup
 *.tgz
 
+# 本地部署传输文件
+部署临时/
+
 # Yarn Integrity
 .yarn-integrity
 
