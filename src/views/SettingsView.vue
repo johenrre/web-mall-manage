@@ -37,13 +37,33 @@
                 <div>
                   <span>THEME PRESET</span>
                   <h3>页面风格</h3>
-                  <p>点击后同步替换主题颜色、配套图片、首页轮播与分享展示文案。</p>
+                  <p>选择模板会填入主题颜色、配套图片、首页轮播与分享展示文案，保存后才会生效。</p>
                 </div>
                 <span class="theme-switcher__status" :class="{ 'is-dirty': themePresetDirty }">
-                  {{ themePresetDirty ? '待保存' : '已同步' }}
+                  {{ themePresetDirty ? '模板待保存' : '当前已生效' }}
                 </span>
               </div>
 
+              <div class="theme-current-block">
+                <div class="theme-current-block__heading">
+                  <strong>当前风格</strong>
+                  <span>线上已生效</span>
+                  <small v-if="themePresetDirty">下方模板尚未保存，不会影响当前风格。</small>
+                </div>
+                <div class="theme-current-card">
+                  <span class="theme-choice__swatches" aria-hidden="true">
+                    <i v-for="color in currentThemeOption.colors" :key="color" :style="{ backgroundColor: color }" />
+                  </span>
+                  <span class="theme-choice__title">{{ currentThemeOption.label }}</span>
+                  <span class="theme-choice__current">当前生效</span>
+                  <small>{{ currentThemeOption.description }}</small>
+                </div>
+              </div>
+
+              <div class="theme-template-heading">
+                <strong>风格模板</strong>
+                <span>点击模板后填入编辑表单，保存后才会替换当前风格</span>
+              </div>
               <div class="theme-choice-row" role="group" aria-label="页面风格">
                 <button
                   v-for="option in themeOptions"
@@ -51,7 +71,7 @@
                   type="button"
                   class="theme-choice"
                   :class="{ 'is-selected': form.miniprogram_theme_key === option.value }"
-                  :aria-label="`应用${option.label}`"
+                  :aria-label="`选择${option.label}模板`"
                   :aria-pressed="form.miniprogram_theme_key === option.value"
                   @click="handleThemeChange(option.value)"
                 >
@@ -64,6 +84,8 @@
                       <CheckOutlined />
                     </span>
                   </span>
+                  <span v-if="appliedThemeKey === option.value" class="theme-choice__current">当前生效</span>
+                  <span v-else-if="themePresetDirty && form.miniprogram_theme_key === option.value" class="theme-choice__draft">待保存模板</span>
                   <small>{{ option.description }}</small>
                 </button>
               </div>
@@ -256,66 +278,60 @@
                 <div class="field-help">首页活动卡片、活动详情页顶部和微信分享封面共用；未配置时不显示图片。</div>
               </a-form-item>
 
-              <div class="activity-config-block">
-                <div class="section-toolbar">
-                  <div>
-                    <h3 class="setting-section-title">奖励阶梯</h3>
-                    <p>每档只配置点赞数、播放量和累计奖励；小程序自动补充单位与千分位。</p>
-                  </div>
-                  <a-button type="primary" ghost :disabled="activityRewardTiers.length >= 10" @click="addActivityRewardTier">
-                    <PlusOutlined /> 添加阶梯
-                  </a-button>
+              <div class="section-toolbar">
+                <div>
+                  <h3 class="setting-section-title">活动详情图片</h3>
+                  <p>最多 10 张，按顺序从上到下铺开；请把活动文案直接合成到图片里。</p>
                 </div>
-                <div class="activity-config-list">
-                  <div v-for="(item, index) in activityRewardTiers" :key="item.rowKey" class="activity-reward-config-row">
-                    <div class="activity-config-order">{{ String(index + 1).padStart(2, '0') }}</div>
-                    <a-form-item label="点赞数">
-                      <a-input-number v-model:value="item.likes" :min="1" :precision="0" :controls="false" placeholder="例如 30" />
-                    </a-form-item>
-                    <a-form-item label="播放量">
-                      <a-input-number v-model:value="item.views" :min="1" :precision="0" :controls="false" placeholder="例如 1000" />
-                    </a-form-item>
-                    <a-form-item label="累计奖励（元）">
-                      <a-input-number v-model:value="item.reward" :min="1" :precision="0" :controls="false" placeholder="例如 10" />
-                    </a-form-item>
-                    <a-space class="activity-config-actions">
-                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveActivityRewardTier(index, -1)"><ArrowUpOutlined /></a-button>
-                      <a-button size="small" :disabled="index === activityRewardTiers.length - 1" title="下移" @click="moveActivityRewardTier(index, 1)"><ArrowDownOutlined /></a-button>
-                      <a-button size="small" danger :disabled="activityRewardTiers.length <= 1" title="删除" @click="removeActivityRewardTier(index)"><DeleteOutlined /></a-button>
-                    </a-space>
-                  </div>
-                </div>
+                <a-button type="primary" ghost :disabled="activityDetailImages.length >= 10" @click="addActivityDetailImage">
+                  <PlusOutlined /> 添加详情图片
+                </a-button>
               </div>
 
-              <div class="activity-config-block">
-                <div class="section-toolbar">
-                  <div>
-                    <h3 class="setting-section-title">发布要求</h3>
-                    <p>每项仅展示标题和说明，顺序与这里保持一致。</p>
-                  </div>
-                  <a-button type="primary" ghost :disabled="activityRequirements.length >= 10" @click="addActivityRequirement">
-                    <PlusOutlined /> 添加要求
-                  </a-button>
-                </div>
-                <div class="activity-config-list">
-                  <div v-for="(item, index) in activityRequirements" :key="item.rowKey" class="activity-requirement-config-row">
-                    <div class="activity-config-order">{{ String(index + 1).padStart(2, '0') }}</div>
-                    <div class="activity-requirement-fields">
-                      <a-form-item label="标题">
-                        <a-input v-model:value="item.title" :maxlength="30" show-count placeholder="例如：完整记录创作过程" />
-                      </a-form-item>
-                      <a-form-item label="说明">
-                        <a-textarea v-model:value="item.description" :maxlength="300" show-count :auto-size="{ minRows: 2, maxRows: 5 }" placeholder="填写这一项的具体要求" />
-                      </a-form-item>
+              <a-table
+                class="slide-table activity-detail-table"
+                :columns="activityDetailColumns"
+                :data-source="activityDetailImages"
+                :pagination="false"
+                row-key="rowKey"
+                size="middle"
+              >
+                <template #emptyText>
+                  <a-empty description="尚未配置详情图片，将使用首页活动图作为回退图" />
+                </template>
+                <template #bodyCell="{ column, record, index }">
+                  <template v-if="column.key === 'order'">
+                    <strong>{{ index + 1 }}</strong>
+                  </template>
+                  <template v-else-if="column.key === 'image'">
+                    <div class="slide-image-cell">
+                      <div class="slide-image-preview">
+                        <img v-if="record.image" :src="resolveMedia(record.image)" alt="活动详情图片预览" />
+                        <PictureOutlined v-else />
+                      </div>
+                      <div class="slide-image-inputs">
+                        <a-input v-model:value="record.image" placeholder="图片地址或上传图片" @blur="record.image = normalizeSlideImage(record.image)" />
+                        <a-upload
+                          :show-upload-list="false"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          :before-upload="validateSlideFile"
+                          :custom-request="(options: any) => uploadActivityDetailImage(options, record)"
+                        >
+                          <a-button size="small" :loading="uploadingActivityDetailKey === record.rowKey"><UploadOutlined /> 上传图片</a-button>
+                        </a-upload>
+                      </div>
                     </div>
-                    <a-space class="activity-config-actions">
-                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveActivityRequirement(index, -1)"><ArrowUpOutlined /></a-button>
-                      <a-button size="small" :disabled="index === activityRequirements.length - 1" title="下移" @click="moveActivityRequirement(index, 1)"><ArrowDownOutlined /></a-button>
-                      <a-button size="small" danger :disabled="activityRequirements.length <= 1" title="删除" @click="removeActivityRequirement(index)"><DeleteOutlined /></a-button>
+                  </template>
+                  <template v-else-if="column.key === 'actions'">
+                    <a-space>
+                      <a-button size="small" :disabled="index === 0" title="上移" @click="moveActivityDetailImage(index, -1)"><ArrowUpOutlined /></a-button>
+                      <a-button size="small" :disabled="index === activityDetailImages.length - 1" title="下移" @click="moveActivityDetailImage(index, 1)"><ArrowDownOutlined /></a-button>
+                      <a-button size="small" danger title="删除" @click="removeActivityDetailImage(record.rowKey)"><DeleteOutlined /></a-button>
                     </a-space>
-                  </div>
-                </div>
-              </div>
+                  </template>
+                </template>
+              </a-table>
+              <div class="field-help">建议使用竖向 JPG、PNG 或 WebP 长图；每张不超过 5 MB。详情页会按这里的顺序逐张展示。</div>
             </section>
 
             <section class="setting-section">
@@ -735,23 +751,16 @@ interface EditablePurchaseNoticeImage {
   image: string
 }
 
-interface EditableContactQr {
+interface EditableActivityDetailImage {
   rowKey: string
   id: string
   image: string
 }
 
-interface EditableActivityRewardTier {
+interface EditableContactQr {
   rowKey: string
-  likes: number | null
-  views: number | null
-  reward: number | null
-}
-
-interface EditableActivityRequirement {
-  rowKey: string
-  title: string
-  description: string
+  id: string
+  image: string
 }
 
 interface StorageStatus {
@@ -778,9 +787,11 @@ const tab = ref('store')
 const loading = ref(false)
 const saving = ref(false)
 const themePresetDirty = ref(false)
+const appliedThemeKey = ref<ThemeKey>('healing-ins')
 const uploadingSlideKey = ref('')
 const uploadingTrayKey = ref('')
 const uploadingPurchaseNoticeKey = ref('')
+const uploadingActivityDetailKey = ref('')
 const storageStatus = ref<StorageStatus | null>(null)
 const form = reactive<any>({})
 const themeOptions: ThemeOption[] = [
@@ -797,13 +808,13 @@ const themeOptions: ThemeOption[] = [
   { value: 'morandi-gallery', label: '莫兰迪画廊风', description: '灰蓝、灰粉与鼠尾草绿，像安静的艺术展陈。', colors: ['#ecebe7', '#f8f7f3', '#6f7784', '#94aaa0', '#b88380'] },
   { value: 'monochrome-museum', label: '黑白博物馆风', description: '象牙白、石墨灰与低彩材质色，克制现代。', colors: ['#ececea', '#fafaf7', '#4f5759', '#9aa6a3', '#9b7b72'] },
 ]
+const currentThemeOption = computed(() => themeOptions.find((option) => option.value === appliedThemeKey.value) || themeOptions[0])
 const contact = reactive({ wechatId: '' })
 const contactQrs = ref<EditableContactQr[]>([])
 const slides = ref<EditableHomeSlide[]>([])
 const trayImages = ref<EditableTrayImage[]>([])
 const purchaseNoticeImages = ref<EditablePurchaseNoticeImage[]>([])
-const activityRewardTiers = ref<EditableActivityRewardTier[]>([])
-const activityRequirements = ref<EditableActivityRequirement[]>([])
+const activityDetailImages = ref<EditableActivityDetailImage[]>([])
 const refundReasons = ref<string[]>([])
 const mainEntrySlots = ref<EditableImageSlot[]>([
   { key: 'handcraft', label: '开始手作', image: '', help: '建议上传 1200 × 1024 的 JPG。' },
@@ -818,22 +829,8 @@ const shortcutSlots = ref<EditableImageSlot[]>([
 let slideSequence = 0
 let trayImageSequence = 0
 let purchaseNoticeImageSequence = 0
+let activityDetailImageSequence = 0
 let contactQrSequence = 0
-let activityRewardTierSequence = 0
-let activityRequirementSequence = 0
-
-const defaultActivityRewardTiers = [
-  { likes: 30, views: 1000, reward: 10 },
-  { likes: 100, views: 10000, reward: 80 },
-  { likes: 1000, views: 100000, reward: 1000 },
-  { likes: 10000, views: 1000000, reward: 10000 },
-]
-
-const defaultActivityRequirements = [
-  { title: '完整记录创作过程', description: '在 DIY 设计页录制 12～25 秒视频，或整理为图文。建议剪去等待片段，保留选珠、调整和成串的关键过程；画面清晰、款式完整，并露出小程序品牌标记。' },
-  { title: '零粉也可以参与', description: '活动不设粉丝门槛。小红书、抖音或视频号均可发布，以平台可核验的公开数据为准。' },
-  { title: '添加活动相关标签', description: '发布时至少带 3 个相关标签，方便客服核验活动作品。' },
-]
 
 const slideColumns = [
   { title: '主图', key: 'image', width: 310 },
@@ -856,6 +853,12 @@ const purchaseNoticeColumns = [
   { title: '操作', key: 'actions', width: 150 },
 ]
 
+const activityDetailColumns = [
+  { title: '顺序', key: 'order', width: 100 },
+  { title: '活动详情图片', key: 'image' },
+  { title: '操作', key: 'actions', width: 150 },
+]
+
 const stringKeys = [
   'points_rule_text',
   'refund_return_address',
@@ -872,6 +875,7 @@ const stringKeys = [
   'miniprogram_wrist_measurement_image',
   'miniprogram_home_process_image',
   'miniprogram_home_activity_image',
+  'miniprogram_activity_detail_images_json',
   'miniprogram_customer_service_float_image',
   'miniprogram_home_music_url',
   'miniprogram_mall_hero_image',
@@ -923,64 +927,34 @@ function boolValue(value: unknown): boolean {
   return value === true || value === 1 || value === '1' || value === 'true'
 }
 
-function positiveIntegerOrNull(value: unknown): number | null {
-  const parsed = Number(value)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
-}
-
-function createActivityRewardTier(source: any = {}): EditableActivityRewardTier {
-  activityRewardTierSequence += 1
+function createActivityDetailImage(source: any = {}): EditableActivityDetailImage {
+  activityDetailImageSequence += 1
   return {
-    rowKey: `activity-reward-tier-${activityRewardTierSequence}`,
-    likes: positiveIntegerOrNull(source.likes),
-    views: positiveIntegerOrNull(source.views),
-    reward: positiveIntegerOrNull(source.reward),
+    rowKey: `activity-detail-image-${activityDetailImageSequence}`,
+    id: text(source.id) || `activity-detail-${Date.now()}-${activityDetailImageSequence}`,
+    image: normalizeSlideImage(
+      typeof source === 'string'
+        ? source
+        : source.image || source.imageUrl || source.image_url || source.url,
+    ),
   }
 }
 
-function parseActivityRewardTiers(value: unknown): EditableActivityRewardTier[] {
+function parseActivityDetailImages(value: unknown): EditableActivityDetailImage[] {
   try {
     const parsed = JSON.parse(text(value) || '[]')
-    const source = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultActivityRewardTiers
-    return source.slice(0, 10).map(createActivityRewardTier)
+    return Array.isArray(parsed) ? parsed.map(createActivityDetailImage).slice(0, 10) : []
   } catch {
-    message.error('数据库中的灵感分享奖励阶梯格式错误，已显示默认内容')
-    return defaultActivityRewardTiers.map(createActivityRewardTier)
+    message.error('数据库中的活动详情图片配置格式错误，请重新配置')
+    return []
   }
 }
 
-function serializeActivityRewardTiers(): string {
-  return JSON.stringify(activityRewardTiers.value.map((item) => ({
-    likes: Number(item.likes),
-    views: Number(item.views),
-    reward: Number(item.reward),
-  })))
-}
-
-function createActivityRequirement(source: any = {}): EditableActivityRequirement {
-  activityRequirementSequence += 1
-  return {
-    rowKey: `activity-requirement-${activityRequirementSequence}`,
-    title: text(source.title),
-    description: text(source.description || source.desc),
-  }
-}
-
-function parseActivityRequirements(value: unknown): EditableActivityRequirement[] {
-  try {
-    const parsed = JSON.parse(text(value) || '[]')
-    const source = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultActivityRequirements
-    return source.slice(0, 10).map(createActivityRequirement)
-  } catch {
-    message.error('数据库中的灵感分享发布要求格式错误，已显示默认内容')
-    return defaultActivityRequirements.map(createActivityRequirement)
-  }
-}
-
-function serializeActivityRequirements(): string {
-  return JSON.stringify(activityRequirements.value.map((item) => ({
-    title: text(item.title),
-    description: text(item.description),
+function serializeActivityDetailImages(): string {
+  if (!activityDetailImages.value.length) return ''
+  return JSON.stringify(activityDetailImages.value.map((item) => ({
+    id: item.id,
+    image: normalizeSlideImage(item.image),
   })))
 }
 
@@ -1193,7 +1167,7 @@ function handleThemeChange(value: unknown): void {
 
   themePresetDirty.value = true
   const label = themeOptions.find((option) => option.value === value)?.label || value
-  message.info(`已切换为“${label}”完整预设，点击“保存全部设置”后才会生效`)
+  message.warning(`已切换为“${label}”风格，当前未保存；点击“保存全部设置”后才会生效`)
 }
 
 async function load() {
@@ -1202,16 +1176,15 @@ async function load() {
     const data: any = await get('/api/admin/settings_get')
     Object.assign(form, data)
     for (const key of stringKeys) form[key] = String(data[key] ?? '')
-    if (!themeOptions.some((option) => option.value === form.miniprogram_theme_key)) {
-      form.miniprogram_theme_key = 'healing-ins'
-    }
+    const persistedThemeKey: ThemeKey = isThemeKey(form.miniprogram_theme_key) ? form.miniprogram_theme_key : 'healing-ins'
+    form.miniprogram_theme_key = persistedThemeKey
+    appliedThemeKey.value = persistedThemeKey
     for (const key of boolKeys) form[key] = boolValue(data[key])
     form.kuaidi100_cache_minutes = Number(data.kuaidi100_cache_minutes || 30)
     slides.value = parseSlides(data.miniprogram_home_slides_json)
     trayImages.value = parseTrayImages(data.miniprogram_diy_tray_images_json)
     purchaseNoticeImages.value = parsePurchaseNoticeImages(data.miniprogram_purchase_notice_images_json)
-    activityRewardTiers.value = parseActivityRewardTiers(data.miniprogram_activity_reward_tiers_json)
-    activityRequirements.value = parseActivityRequirements(data.miniprogram_activity_requirements_json)
+    activityDetailImages.value = parseActivityDetailImages(data.miniprogram_activity_detail_images_json)
     try {
       const parsed = JSON.parse(String(data.miniprogram_refund_reasons_json || '[]'))
       refundReasons.value = Array.isArray(parsed) ? parsed.map((item) => text(item)).filter(Boolean).slice(0, 10) : []
@@ -1286,6 +1259,22 @@ function removePurchaseNoticeImage(rowKey: string) {
   purchaseNoticeImages.value = purchaseNoticeImages.value.filter((item) => item.rowKey !== rowKey)
 }
 
+function addActivityDetailImage() {
+  if (activityDetailImages.value.length >= 10) return message.warning('活动详情图片最多配置 10 张')
+  activityDetailImages.value.push(createActivityDetailImage())
+}
+
+function moveActivityDetailImage(index: number, offset: number) {
+  const target = index + offset
+  if (target < 0 || target >= activityDetailImages.value.length) return
+  const [item] = activityDetailImages.value.splice(index, 1)
+  if (item) activityDetailImages.value.splice(target, 0, item)
+}
+
+function removeActivityDetailImage(rowKey: string) {
+  activityDetailImages.value = activityDetailImages.value.filter((item) => item.rowKey !== rowKey)
+}
+
 function addContactQr() {
   if (contactQrs.value.length >= 10) return message.warning('客服二维码最多配置 10 个')
   contactQrs.value.push(createContactQr())
@@ -1293,40 +1282,6 @@ function addContactQr() {
 
 function removeContactQr(rowKey: string) {
   contactQrs.value = contactQrs.value.filter((item) => item.rowKey !== rowKey)
-}
-
-function addActivityRewardTier() {
-  if (activityRewardTiers.value.length >= 10) return message.warning('奖励阶梯最多配置 10 档')
-  activityRewardTiers.value.push(createActivityRewardTier())
-}
-
-function moveActivityRewardTier(index: number, offset: number) {
-  const target = index + offset
-  if (target < 0 || target >= activityRewardTiers.value.length) return
-  const [item] = activityRewardTiers.value.splice(index, 1)
-  if (item) activityRewardTiers.value.splice(target, 0, item)
-}
-
-function removeActivityRewardTier(index: number) {
-  if (activityRewardTiers.value.length <= 1) return message.warning('至少保留一档奖励')
-  activityRewardTiers.value.splice(index, 1)
-}
-
-function addActivityRequirement() {
-  if (activityRequirements.value.length >= 10) return message.warning('发布要求最多配置 10 项')
-  activityRequirements.value.push(createActivityRequirement())
-}
-
-function moveActivityRequirement(index: number, offset: number) {
-  const target = index + offset
-  if (target < 0 || target >= activityRequirements.value.length) return
-  const [item] = activityRequirements.value.splice(index, 1)
-  if (item) activityRequirements.value.splice(target, 0, item)
-}
-
-function removeActivityRequirement(index: number) {
-  if (activityRequirements.value.length <= 1) return message.warning('至少保留一项发布要求')
-  activityRequirements.value.splice(index, 1)
 }
 
 function addRefundReason() {
@@ -1403,6 +1358,21 @@ async function uploadPurchaseNoticeImage(options: any, item: EditablePurchaseNot
   }
 }
 
+async function uploadActivityDetailImage(options: any, item: EditableActivityDetailImage) {
+  uploadingActivityDetailKey.value = item.rowKey
+  try {
+    const result = await uploadImage(options.file as File)
+    item.image = result.url
+    options.onSuccess?.(result)
+    message.success(result.source === 'oss' ? '活动详情图片已上传到阿里云 OSS' : '活动详情图片已上传到本地')
+  } catch (error) {
+    message.error(errorMessage(error))
+    options.onError?.(error as Error)
+  } finally {
+    uploadingActivityDetailKey.value = ''
+  }
+}
+
 async function save() {
   const homeIdentityName = text(form.miniprogram_home_identity_name)
   const diyPageTitle = text(form.miniprogram_diy_page_title)
@@ -1429,39 +1399,16 @@ async function save() {
     return message.warning('每张购买须知都必须填写图片地址或上传图片')
   }
   if (purchaseNoticeImages.value.length > 10) return message.warning('购买须知最多配置 10 张')
+  for (const item of activityDetailImages.value) item.image = normalizeSlideImage(item.image)
+  if (activityDetailImages.value.some((item) => !item.image)) {
+    return message.warning('每张活动详情图片都必须填写图片地址或上传图片')
+  }
+  if (activityDetailImages.value.length > 10) return message.warning('活动详情图片最多配置 10 张')
   for (const item of contactQrs.value) item.image = normalizeSlideImage(item.image)
   if (contactQrs.value.some((item) => !item.image)) {
     return message.warning('请上传客服二维码，或删除未填写的二维码项')
   }
   if (contactQrs.value.length > 10) return message.warning('客服二维码最多配置 10 个')
-  if (activityRewardTiers.value.length < 1 || activityRewardTiers.value.length > 10) {
-    return message.warning('奖励阶梯需要配置 1 至 10 档')
-  }
-  for (let index = 0; index < activityRewardTiers.value.length; index += 1) {
-    const item = activityRewardTiers.value[index]
-    if (!item || !Number.isInteger(item.likes) || !Number.isInteger(item.views) || !Number.isInteger(item.reward)
-      || Number(item.likes) <= 0 || Number(item.views) <= 0 || Number(item.reward) <= 0) {
-      return message.warning(`奖励阶梯第 ${index + 1} 档的三个数字都必须是正整数`)
-    }
-    const previous = activityRewardTiers.value[index - 1]
-    if (previous && (Number(item.likes) <= Number(previous.likes) || Number(item.views) <= Number(previous.views))) {
-      return message.warning(`奖励阶梯第 ${index + 1} 档的点赞数和播放量必须高于上一档`)
-    }
-    if (previous && Number(item.reward) < Number(previous.reward)) {
-      return message.warning(`奖励阶梯第 ${index + 1} 档的奖励不能低于上一档`)
-    }
-  }
-  if (activityRequirements.value.length < 1 || activityRequirements.value.length > 10) {
-    return message.warning('发布要求需要配置 1 至 10 项')
-  }
-  for (let index = 0; index < activityRequirements.value.length; index += 1) {
-    const item = activityRequirements.value[index]
-    const title = text(item?.title)
-    const description = text(item?.description)
-    if (!title || !description) return message.warning(`发布要求第 ${index + 1} 项的标题和说明不能为空`)
-    if (title.length > 30) return message.warning(`发布要求第 ${index + 1} 项的标题不能超过 30 个字符`)
-    if (description.length > 300) return message.warning(`发布要求第 ${index + 1} 项的说明不能超过 300 个字符`)
-  }
   const normalizedRefundReasons = refundReasons.value.map((reason) => text(reason))
   if (normalizedRefundReasons.some((reason) => !reason)) return message.warning('售后原因不能为空')
   if (normalizedRefundReasons.some((reason) => reason.length > 20)) return message.warning('每条售后原因不能超过 20 个字符')
@@ -1474,20 +1421,20 @@ async function save() {
   if (!Number.isInteger(kuaidi100CacheMinutes) || kuaidi100CacheMinutes < 30 || kuaidi100CacheMinutes > 1440) {
     return message.warning('快递100查询缓存时间必须是 30 至 1440 分钟的整数')
   }
-  const payload: Record<string, unknown> = {
+  const payload: Record<string, unknown> = {}
+  for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
+  for (const key of boolKeys) payload[key] = Boolean(form[key])
+  Object.assign(payload, {
     contact_service_json: serializeContact(),
     miniprogram_home_slides_json: serializeSlides(),
     miniprogram_home_main_entries_json: serializeImageSlots(mainEntrySlots.value),
     miniprogram_home_shortcuts_json: serializeImageSlots(shortcutSlots.value),
     miniprogram_diy_tray_images_json: serializeTrayImages(),
     miniprogram_purchase_notice_images_json: serializePurchaseNoticeImages(),
-    miniprogram_activity_reward_tiers_json: serializeActivityRewardTiers(),
-    miniprogram_activity_requirements_json: serializeActivityRequirements(),
+    miniprogram_activity_detail_images_json: serializeActivityDetailImages(),
     miniprogram_refund_reasons_json: JSON.stringify(normalizedRefundReasons),
     kuaidi100_cache_minutes: kuaidi100CacheMinutes,
-  }
-  for (const key of stringKeys) payload[key] = String(form[key] ?? '').trim()
-  for (const key of boolKeys) payload[key] = Boolean(form[key])
+  })
 
   saving.value = true
   try {
@@ -1553,6 +1500,10 @@ onMounted(() => {
 }
 .theme-switcher__heading h3 { margin: 0; color: #244a3e; font: 700 20px Georgia, 'Noto Serif SC', serif; }
 .theme-switcher__heading p { margin: 5px 0 0; color: #7f8d88; font-size: 12px; }
+.theme-switcher__current { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.theme-switcher__current > span { color: #879991; font-size: 11px; }
+.theme-switcher__current strong { color: #31584b; font-size: 15px; }
+.theme-switcher__current small { flex-basis: 100%; color: #9a6b2f; font-size: 11px; }
 .theme-switcher__status {
   flex: 0 0 auto;
   padding: 4px 9px;
@@ -1563,6 +1514,15 @@ onMounted(() => {
   font-weight: 600;
 }
 .theme-switcher__status.is-dirty { color: #9a6b2f; background: #f7ead4; }
+.theme-current-block { display: flex; align-items: stretch; gap: 12px; margin-bottom: 16px; }
+.theme-current-block__heading { display: flex; min-width: 145px; flex-direction: column; justify-content: center; gap: 4px; }
+.theme-current-block__heading strong { color: #31584b; font-size: 13px; }
+.theme-current-block__heading span { color: #5d776e; font-size: 11px; }
+.theme-current-block__heading small { color: #9a6b2f; font-size: 10px; line-height: 1.5; }
+.theme-current-card { display: flex; width: 238px; min-height: 118px; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid #6f8f86; border-radius: 11px; background: #fbfdfc; box-shadow: 0 0 0 1px rgba(96, 125, 118, .22), 0 8px 20px rgba(66, 87, 79, .08); }
+.theme-template-heading { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 8px; }
+.theme-template-heading strong { color: #49645b; font-size: 12px; }
+.theme-template-heading span { color: #96a29d; font-size: 11px; }
 .theme-choice-row {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1597,6 +1557,10 @@ onMounted(() => {
 .theme-choice__swatches i { display: block; }
 .theme-choice__title { padding-right: 16px; font-size: 12px; font-weight: 700; line-height: 1.4; }
 .theme-choice__selected { position: absolute; top: 39px; right: 8px; display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: #fff; background: #607d76; font-size: 10px; }
+.theme-choice__current,
+.theme-choice__draft { align-self: flex-start; padding: 2px 6px; border-radius: 999px; font-size: 10px; font-weight: 600; line-height: 1.3; }
+.theme-choice__current { color: #4f7166; background: #e5f0eb; }
+.theme-choice__draft { color: #93652d; background: #f7ead4; }
 .theme-choice small { display: -webkit-box; overflow: hidden; color: #84908c; font-size: 10px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .theme-choice.is-selected {
   border-color: #6f8f86;
@@ -1648,6 +1612,8 @@ onMounted(() => {
   .asset-grid--two { grid-template-columns: 1fr; }
   .theme-switcher { padding: 16px; }
   .theme-switcher__heading { gap: 14px; }
+  .theme-current-block { flex-wrap: wrap; }
+  .theme-current-block__heading { min-width: 100%; }
   .settings-tabs { flex-direction: column; }
   .settings-tabs :deep(.ant-tabs-nav) { width: 100%; margin: 0; padding: 8px; border-right: 0; }
   .settings-tabs :deep(.ant-tabs-nav-list) { overflow: auto; }
@@ -1658,6 +1624,8 @@ onMounted(() => {
   .activity-requirement-fields { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
+  .theme-current-card { width: 100%; }
+  .theme-template-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
   .theme-choice-row { overflow-x: auto; grid-template-columns: repeat(12, 108px); padding-bottom: 5px; scrollbar-width: thin; }
 }
 </style>
