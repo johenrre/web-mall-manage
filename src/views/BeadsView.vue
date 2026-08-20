@@ -77,7 +77,7 @@
           <template v-else-if="column.key==='category'">
             <div class="category-cell">
               <a-tag color="green" :bordered="false">{{ record.category||'未分类' }}</a-tag>
-              <span>{{ record.subcategory||record.color_family||'未设置子分类' }}</span>
+              <span>{{ record.subcategory||'未设置子分类' }}</span>
             </div>
           </template>
 
@@ -166,9 +166,13 @@
                 <a-form-item label="繁体名称"><a-input v-model:value="form.name_zh_tw" placeholder="留空将自动转换" /></a-form-item>
                 <a-form-item label="素材排序"><a-input-number v-model:value="form.category_sort_order" :min="1" style="width:100%" /></a-form-item>
                 <a-form-item label="主分类" name="category"><a-select v-model:value="form.category" :options="categories.map(x=>({label:x.label,value:x.label}))" @change="categoryChanged" /></a-form-item>
-                <a-form-item :label="isAccessory?'配饰子分类':'色系'" :name="isAccessory?'subcategory':'color_family'">
-                  <a-select v-if="currentSubcategories.length" :value="isAccessory?form.subcategory:form.color_family" :options="currentSubcategories.map(x=>({label:x.label,value:x.label}))" @change="subChanged" />
-                  <a-input v-else :value="isAccessory?form.subcategory:form.color_family" @update:value="subChanged" />
+                <a-form-item :label="isAccessory?'配饰子分类':'色系'" name="subcategory">
+                  <a-select
+                    v-model:value="form.subcategory"
+                    :disabled="!currentSubcategories.length"
+                    :options="currentSubcategories.map(x=>({label:x.label,value:x.label}))"
+                    :placeholder="currentSubcategories.length?'请选择子分类':'请先到分类设置中配置子分类'"
+                  />
                 </a-form-item>
                 <a-form-item label="材质类型" name="type"><a-select v-model:value="form.type" :options="materialOptions" /></a-form-item>
                 <a-form-item label="异形材质">
@@ -339,9 +343,9 @@ const materialLabels:Record<string,string>={wood:'木质',stone:'石质',glass:'
 const materialOptions=Object.entries(materialLabels).map(([value,label])=>({value,label}))
 const stringingPositionOptions=[{label:'中心穿线',value:'center'},{label:'顶部穿线',value:'top'}]
 const renderFilterOptions=[{label:'全部渲染状态',value:''},{label:'异形材质',value:'irregular'},{label:'顶部穿线',value:'top'},{label:'已配置独立 Canvas 图',value:'canvas'},{label:'资料待完善',value:'issues'}]
-const emptyForm=()=>({id:'',name:'',name_en:'',name_zh_tw:'',category:'水晶',subcategory:'',category_sort_order:100,color_family:'',type:'stone',variants:[{id:null,size:8,price:0}] as BeadVariantForm[],image:'',canvas_image:'',stringing_width_mm:null as number|null,stringing_position:'center' as 'center'|'top',stringing_offset_mm:0,image_scale:1,is_irregular:false,layer:null as number|null,description:''})
+const emptyForm=()=>({id:'',name:'',name_en:'',name_zh_tw:'',category:'水晶',subcategory:'',category_sort_order:100,type:'stone',variants:[{id:null,size:8,price:0}] as BeadVariantForm[],image:'',canvas_image:'',stringing_width_mm:null as number|null,stringing_position:'center' as 'center'|'top',stringing_offset_mm:0,image_scale:1,is_irregular:false,layer:null as number|null,description:''})
 const form=reactive(emptyForm())
-const rules={name:[{required:true,message:'请输入中文名称'}],category:[{required:true,message:'请选择主分类'}],type:[{required:true,message:'请选择材质'}]}
+const rules={name:[{required:true,message:'请输入中文名称'}],category:[{required:true,message:'请选择主分类'}],subcategory:[{required:true,message:'请选择子分类'}],type:[{required:true,message:'请选择材质'}]}
 const columns=[
   {title:'珠材信息',key:'bead',width:250},
   {title:'分类',key:'category',width:130},
@@ -368,18 +372,17 @@ const overview=computed(()=>({
 }))
 
 const subcategoryFilterOptions=computed(()=>{
-  const source=activeCategory.value?beads.value.filter(item=>item.category===activeCategory.value):beads.value
-  return Array.from(new Set(source.map(item=>String(item.subcategory||item.color_family||'').trim()).filter(Boolean)))
-    .sort((a,b)=>a.localeCompare(b,'zh-CN'))
-    .map(value=>({label:value,value}))
+  if(!activeCategory.value)return []
+  const category=categories.value.find(item=>item.label===activeCategory.value)
+  return (subcategories.value[category?.id||'']||[]).map(item=>({label:item.label,value:item.label}))
 })
 
 const filtered=computed(()=>beads.value.filter(item=>{
   const query=keyword.value.trim().toLowerCase()
   if(activeCategory.value&&item.category!==activeCategory.value)return false
-  if(subcategoryFilter.value&&item.subcategory!==subcategoryFilter.value&&item.color_family!==subcategoryFilter.value)return false
+  if(subcategoryFilter.value&&item.subcategory!==subcategoryFilter.value)return false
   if(materialFilter.value&&item.type!==materialFilter.value)return false
-  if(query&&![item.id,item.name,item.name_en,item.name_zh_tw,item.category,item.subcategory,item.color_family].some(value=>String(value||'').toLowerCase().includes(query)))return false
+  if(query&&![item.id,item.name,item.name_en,item.name_zh_tw,item.category,item.subcategory].some(value=>String(value||'').toLowerCase().includes(query)))return false
   if(renderFilter.value==='irregular'&&!booleanValue(item.is_irregular))return false
   if(renderFilter.value==='top'&&item.stringing_position!=='top')return false
   if(renderFilter.value==='canvas'&&!String(item.canvas_image||'').trim())return false
@@ -407,8 +410,7 @@ function cloneSubcategories(value:Record<string,Category[]>){return Object.fromE
 function countBySubcategory(categoryId:string,label:string){
   const category=categories.value.find(item=>item.id===categoryId)
   if(!category)return 0
-  const field=categoryId==='peishi'?'subcategory':'color_family'
-  return beads.value.filter(item=>item.category===category.label&&String(item[field]||'')===label).length
+  return beads.value.filter(item=>item.category===category.label&&String(item.subcategory||'')===label).length
 }
 
 function selectCategory(label:string){activeCategory.value=label;subcategoryFilter.value=undefined}
@@ -430,8 +432,7 @@ async function load(){
 
 function openCreate(){Object.assign(form,emptyForm());form.category=categories.value[0]?.label||'';categoryChanged();editorTab.value='base';editorOpen.value=true}
 function openEdit(row:any){Object.assign(form,emptyForm(),row,{id:String(row.id||row.group_id||''),variants:variantsOf(row).map(item=>({id:Number(item.id)||null,size:finiteNumber(item.size,0),price:Math.max(0,finiteNumber(item.price,0))})),canvas_image:String(row.canvas_image||''),stringing_width_mm:positiveNumber(row.stringing_width_mm),stringing_position:row.stringing_position==='top'?'top':'center',stringing_offset_mm:finiteNumber(row.stringing_offset_mm,0),image_scale:positiveNumber(row.image_scale)||1,is_irregular:booleanValue(row.is_irregular),layer:row.layer===null||row.layer===undefined||row.layer===''?null:finiteNumber(row.layer,0)});editorTab.value='base';editorOpen.value=true}
-function categoryChanged(){form.subcategory='';form.color_family='';const first=currentSubcategories.value[0]?.label||'';if(isAccessory.value)form.subcategory=first;else form.color_family=first}
-function subChanged(value:string){if(isAccessory.value)form.subcategory=value;else form.color_family=value}
+function categoryChanged(){form.subcategory=currentSubcategories.value[0]?.label||''}
 function addVariant(){const last=form.variants[form.variants.length-1];form.variants.push({id:null,size:Number(((last?.size||8)+2).toFixed(1)),price:last?.price||0})}
 function removeVariant(index:number){if(form.variants.length<=1)return;form.variants.splice(index,1)}
 function handleIrregularChange(checked:boolean){if(!checked)return;if(form.variants.length>1){form.is_irregular=false;message.warning('异形材质只能设置一个尺寸，请先删除多余尺寸')}}
@@ -440,8 +441,7 @@ function validateVariants(){if(!form.variants.length)return '至少需要一个�
 async function save(){
   try{
     await formRef.value?.validate()
-    if(isAccessory.value&&!form.subcategory){editorTab.value='base';return message.warning('请选择配饰子分类')}
-    if(!isAccessory.value&&!form.color_family){editorTab.value='base';return message.warning('请选择色系')}
+    if(!form.subcategory){editorTab.value='base';return message.warning(isAccessory.value?'请选择配饰子分类':'请选择色系')}
     const variantError=validateVariants();if(variantError){editorTab.value='base';return message.warning(variantError)}
     saving.value=true
     await post(form.id?'/api/bead/update':'/api/bead/create',{...form})

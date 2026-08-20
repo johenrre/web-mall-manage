@@ -222,7 +222,7 @@
                   <div v-else class="material-image fallback">{{ record.name.slice(0,1)||'珠' }}</div>
                   <div>
                     <b>{{ record.name }}</b>
-                    <span>{{ record.category||'未分类' }} · {{ record.subcategory||record.color_family||'未设置子分类' }}</span>
+                    <span>{{ record.category||'未分类' }} · {{ record.subcategory||'未设置子分类' }}</span>
                   </div>
                 </div>
               </template>
