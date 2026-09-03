@@ -139,7 +139,7 @@
           <template v-else-if="column.key==='action'">
             <div class="row-action" @click.stop>
               <a-button
-                v-if="record.inspiration_status==='approved'"
+                v-if="isPinned(record)||canPin(record)"
                 type="link"
                 :loading="pinningId===Number(record.id)"
                 @click="togglePin(record)"
@@ -612,6 +612,10 @@ function hasPresentationOverride(record:Record<string,any>){
   return Boolean(String(record.inspiration_title||'').trim()||String(record.inspiration_subtitle||'').trim()||String(record.inspiration_author_name||'').trim())
 }
 function isPinned(record:Record<string,any>){return Boolean(String(record.inspiration_pinned_at||'').trim())}
+function canPin(record:Record<string,any>){
+  const rawType=String(record.inspiration_type||'').trim().toLowerCase()
+  return Number(record.is_public)>0&&record.inspiration_status==='approved'&&(rawType==='customer'||rawType==='designer')
+}
 function formatNumber(value:unknown){const number=Number(value);return Number.isFinite(number)?Number(number.toFixed(1)).toString():'0'}
 function positiveNumber(value:unknown){const number=Number(value);return Number.isFinite(number)&&number>0?formatNumber(number):''}
 function materialTypeLabel(value:string){return materialTypeLabels[value]||value||'未设置'}
