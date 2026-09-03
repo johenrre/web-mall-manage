@@ -128,6 +128,10 @@
                 <ImageUploader v-model="form.site_title_logo_image" />
                 <div class="field-help">用于小程序品牌标识；用户没有设置头像时也显示这张图。</div>
               </a-form-item>
+              <a-form-item label="小程序横版 Logo">
+                <ImageUploader v-model="form.miniprogram_horizontal_logo_image" />
+                <div class="field-help">用于首页左上角和 DIY 作品展示页。建议上传约 3:1 的透明 PNG，主体贴合画布边缘，避免多余留白。</div>
+              </a-form-item>
             </section>
 
             <section class="setting-section">
@@ -276,6 +280,11 @@
               <a-form-item label="灵感分享计划背景图">
                 <ImageUploader v-model="form.miniprogram_home_activity_image" />
                 <div class="field-help">首页活动卡片、活动详情页顶部和微信分享封面共用；未配置时不显示图片。</div>
+              </a-form-item>
+
+              <a-form-item label="活动弹窗图片">
+                <ImageUploader v-model="form.miniprogram_home_activity_popup_image" />
+                <div class="field-help">仅上传海报主体，不要上传带状态栏、遮罩、按钮或关闭图标的界面截图。建议使用 3:4 竖图；上传后自动启用，清空图片即不弹出。</div>
               </a-form-item>
 
               <div class="section-toolbar">
@@ -872,9 +881,11 @@ const stringKeys = [
   'miniprogram_theme_key',
   'miniprogram_launch_background_image',
   'site_title_logo_image',
+  'miniprogram_horizontal_logo_image',
   'miniprogram_wrist_measurement_image',
   'miniprogram_home_process_image',
   'miniprogram_home_activity_image',
+  'miniprogram_home_activity_popup_image',
   'miniprogram_activity_detail_images_json',
   'miniprogram_customer_service_float_image',
   'miniprogram_home_music_url',
@@ -892,7 +903,11 @@ const stringKeys = [
   'wxpay_notify_url',
   'wxpay_refund_notify_url',
 ]
-const boolKeys = ['miniprogram_enabled', 'wxpay_enabled', 'kuaidi100_enabled']
+const boolKeys = [
+  'miniprogram_enabled',
+  'wxpay_enabled',
+  'kuaidi100_enabled',
+]
 
 const storageAlertType = computed(() => {
   if (!storageStatus.value) return 'info'
