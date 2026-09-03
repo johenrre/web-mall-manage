@@ -35,7 +35,7 @@
       <div class="list-toolbar">
         <div>
           <b>{{ statusLabel }}</b>
-          <span>共 {{ total }} 个作品，点击整行查看设计、珠材和运营信息</span>
+          <span>共 {{ total }} 个作品，点击整行查看详情；每个灵感分类最多置顶 6 个</span>
         </div>
         <a-segmented v-model:value="status" :options="statusOptions" @change="search" />
       </div>
@@ -46,7 +46,7 @@
         :data-source="designs"
         :loading="loading"
         :pagination="pagination"
-        :scroll="{x:1320}"
+        :scroll="{x:1370}"
         :custom-row="designRow"
         row-class-name="design-row"
         @change="onTableChange"
@@ -124,7 +124,12 @@
           </template>
 
           <template v-else-if="column.key==='status'">
-            <StatusTag :status="record.inspiration_status" :map="designStatusMap" />
+            <div class="status-tags">
+              <a-tag v-if="isPinned(record)" color="gold" :bordered="false">
+                <VerticalAlignTopOutlined /> 已置顶
+              </a-tag>
+              <StatusTag :status="record.inspiration_status" :map="designStatusMap" />
+            </div>
             <span class="status-time">
               {{ record.inspiration_submitted_at?'投稿':'创建' }}于
               {{ dateTime(record.inspiration_submitted_at||record.created_at) }}
@@ -133,7 +138,13 @@
 
           <template v-else-if="column.key==='action'">
             <div class="row-action" @click.stop>
-              <a-button type="link" @click="openDetail(record)">查看详情 <RightOutlined /></a-button>
+              <a-button
+                v-if="record.inspiration_status==='approved'"
+                type="link"
+                :loading="pinningId===Number(record.id)"
+                @click="togglePin(record)"
+              >{{ isPinned(record)?'取消置顶':'置顶' }}</a-button>
+              <a-button type="link" @click="openDetail(record)">详情 <RightOutlined /></a-button>
             </div>
           </template>
         </template>
@@ -484,6 +495,7 @@ import { message } from 'ant-design-vue'
 import {
   ClockCircleOutlined,DeleteOutlined,EyeOutlined,HeartOutlined,InboxOutlined,
   PictureOutlined,ReloadOutlined,RightOutlined,ShareAltOutlined,StopOutlined,
+  VerticalAlignTopOutlined,
 } from '@ant-design/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import BraceletPreview from '@/components/BraceletPreview.vue'
@@ -527,7 +539,7 @@ const columns=[
   {title:'售价 / 素材',key:'commerce',width:125},
   {title:'互动数据',key:'engagement',width:135},
   {title:'状态 / 时间',key:'status',width:165},
-  {title:'操作',key:'action',width:115,fixed:'right' as const},
+  {title:'操作',key:'action',width:165,fixed:'right' as const},
 ]
 const materialColumns=[
   {title:'珠材',key:'material',width:270},
@@ -551,6 +563,7 @@ const page=ref(1)
 const pageSize=ref(20)
 const total=ref(0)
 const pendingCount=ref(0)
+const pinningId=ref(0)
 const selected=ref<Record<string,any>>()
 const detailOpen=ref(false)
 const reviewOpen=ref(false)
@@ -598,6 +611,7 @@ function presentationSubtitle(record:Record<string,any>){
 function hasPresentationOverride(record:Record<string,any>){
   return Boolean(String(record.inspiration_title||'').trim()||String(record.inspiration_subtitle||'').trim()||String(record.inspiration_author_name||'').trim())
 }
+function isPinned(record:Record<string,any>){return Boolean(String(record.inspiration_pinned_at||'').trim())}
 function formatNumber(value:unknown){const number=Number(value);return Number.isFinite(number)?Number(number.toFixed(1)).toString():'0'}
 function positiveNumber(value:unknown){const number=Number(value);return Number.isFinite(number)&&number>0?formatNumber(number):''}
 function materialTypeLabel(value:string){return materialTypeLabels[value]||value||'未设置'}
@@ -646,6 +660,21 @@ function onTableChange(paginationValue:{current?:number;pageSize?:number}){
   void load()
 }
 function openDetail(row:Record<string,any>){selected.value=row;detailOpen.value=true}
+async function togglePin(row:Record<string,any>){
+  const id=Number(row.id)||0
+  if(!id||pinningId.value)return
+  const pinned=!isPinned(row)
+  pinningId.value=id
+  try{
+    await post('/api/admin/design_pin',{id,pinned})
+    message.success(pinned?'作品已置顶':'已取消置顶')
+    await load()
+  }catch(error){
+    message.error(errorMessage(error))
+  }finally{
+    pinningId.value=0
+  }
+}
 function openReview(row:Record<string,any>,action:ReviewAction,nextType:ReviewType){
   selected.value=row
   Object.assign(reviewForm,{
@@ -735,7 +764,7 @@ onMounted(()=>{void Promise.all([load(),loadPendingCount()])})
 <style scoped>
 .design-workspace{gap:16px}.header-search{width:290px}.operation-bar{display:grid;grid-template-columns:310px minmax(0,1fr);gap:14px}.review-queue{display:flex;align-items:center;gap:13px;padding:15px 17px;border:1px solid #e5ebe8;border-radius:15px;color:#476157;background:#fff;box-shadow:0 8px 24px rgba(31,74,62,.045);cursor:pointer;text-align:left}.review-queue.urgent{border-color:#ead7a9;background:linear-gradient(135deg,#fffaf0,#fff)}.queue-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:12px;color:#a4772f;background:#fff3d7;font-size:18px}.review-queue>span:nth-child(2){display:grid;flex:1;grid-template-columns:auto 1fr;align-items:end;column-gap:8px}.review-queue small{grid-column:1;color:#7b8984;font-size:10px}.review-queue b{grid-column:1;color:#274d41;font-size:24px;line-height:1}.review-queue em{grid-column:2;grid-row:1/3;align-self:center;color:#97a19e;font-size:10px;font-style:normal}.review-queue>svg{color:#9ba8a3}.type-filter{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 18px;border:1px solid rgba(30,89,73,.08);border-radius:15px;background:#fff;box-shadow:0 8px 24px rgba(31,74,62,.045)}.type-filter>div{display:flex;flex-direction:column}.type-filter small{color:#35584d;font-size:12px;font-weight:700}.type-filter span{margin-top:3px;color:#98a39f;font-size:10px}
 .design-list-card :deep(.ant-card-body){padding:0}.list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 19px;border-bottom:1px solid #edf1ef}.list-toolbar>div{display:flex;flex-direction:column}.list-toolbar b{color:#2b4f44;font-size:14px}.list-toolbar span{margin-top:4px;color:#95a09c;font-size:10px}.design-list-card :deep(.ant-table-thead>tr>th){padding:12px 14px;color:#667870;background:#f8faf9;font-size:10px}.design-list-card :deep(.ant-table-tbody>tr>td){padding:14px}.design-list-card :deep(.design-row){cursor:pointer}.design-list-card :deep(.design-row:hover>td){background:#f6faf8!important}
-.design-cell{display:flex;align-items:center;gap:13px}.preview-button{display:grid;place-items:center;flex:0 0 82px;width:82px;height:82px;padding:0;border:1px solid #e1e9e5;border-radius:50%;background:#f8faf9;cursor:pointer}.design-cell>div:last-child{display:flex;min-width:0;flex-direction:column}.design-cell b{max-width:155px;overflow:hidden;color:#294a40;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.design-code{margin-top:4px;color:#9aa59f;font:9px Consolas,monospace}.design-cell small{margin-top:5px;color:#7f8f88;font-size:9px}.author-cell{display:flex;align-items:center;gap:10px}.author-cell>div{display:flex;min-width:0;flex-direction:column}.author-cell b{max-width:95px;overflow:hidden;color:#455c54;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.author-cell small{margin-top:4px;color:#99a39f;font-size:9px}.type-description{display:block;max-width:125px;margin-top:5px;color:#98a29e;font-size:9px;line-height:1.4}.material-summary{display:flex;flex-direction:column;gap:5px}.material-summary>div{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:6px}.material-summary :deep(.ant-image),.material-summary :deep(img){border-radius:50%;object-fit:contain;background:#f0f4f2}.material-fallback{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:#809088;background:#edf2ef;font-size:9px}.material-summary>div>span:nth-child(2){overflow:hidden;color:#64766f;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.material-summary>div>b{color:#8e6b31;font-size:9px}.material-summary>small{padding-left:31px;color:#a0aaa5;font-size:8px}.commerce-cell{display:flex;flex-direction:column}.commerce-cell>b{color:#ad762d;font-size:13px}.commerce-cell>span{margin-top:5px;color:#667a72;font-size:10px}.commerce-cell>small{margin-top:5px;color:#9aa49f;font-size:9px}.engagement-cell{display:flex;flex-direction:column;gap:5px}.engagement-cell span{display:flex;align-items:center;gap:5px;color:#71827b;font-size:10px}.engagement-cell svg{color:#9aa9a3}.status-time{display:block;margin-top:6px;color:#99a49f;font-size:9px;line-height:1.4}.row-action{white-space:nowrap}
+.design-cell{display:flex;align-items:center;gap:13px}.preview-button{display:grid;place-items:center;flex:0 0 82px;width:82px;height:82px;padding:0;border:1px solid #e1e9e5;border-radius:50%;background:#f8faf9;cursor:pointer}.design-cell>div:last-child{display:flex;min-width:0;flex-direction:column}.design-cell b{max-width:155px;overflow:hidden;color:#294a40;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.design-code{margin-top:4px;color:#9aa59f;font:9px Consolas,monospace}.design-cell small{margin-top:5px;color:#7f8f88;font-size:9px}.author-cell{display:flex;align-items:center;gap:10px}.author-cell>div{display:flex;min-width:0;flex-direction:column}.author-cell b{max-width:95px;overflow:hidden;color:#455c54;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.author-cell small{margin-top:4px;color:#99a39f;font-size:9px}.type-description{display:block;max-width:125px;margin-top:5px;color:#98a29e;font-size:9px;line-height:1.4}.material-summary{display:flex;flex-direction:column;gap:5px}.material-summary>div{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:6px}.material-summary :deep(.ant-image),.material-summary :deep(img){border-radius:50%;object-fit:contain;background:#f0f4f2}.material-fallback{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:#809088;background:#edf2ef;font-size:9px}.material-summary>div>span:nth-child(2){overflow:hidden;color:#64766f;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.material-summary>div>b{color:#8e6b31;font-size:9px}.material-summary>small{padding-left:31px;color:#a0aaa5;font-size:8px}.commerce-cell{display:flex;flex-direction:column}.commerce-cell>b{color:#ad762d;font-size:13px}.commerce-cell>span{margin-top:5px;color:#667a72;font-size:10px}.commerce-cell>small{margin-top:5px;color:#9aa49f;font-size:9px}.engagement-cell{display:flex;flex-direction:column;gap:5px}.engagement-cell span{display:flex;align-items:center;gap:5px;color:#71827b;font-size:10px}.engagement-cell svg{color:#9aa9a3}.status-tags{display:flex;align-items:center;flex-wrap:wrap;gap:5px}.status-tags :deep(.ant-tag){margin-inline-end:0}.status-time{display:block;margin-top:6px;color:#99a49f;font-size:9px;line-height:1.4}.row-action{display:flex;align-items:center;white-space:nowrap}.row-action :deep(.ant-btn){padding-inline:5px}
 .design-detail-drawer :deep(.ant-drawer-body){padding:18px;background:#f7f9f8}.design-detail-drawer :deep(.ant-drawer-footer){padding:12px 18px}.detail-hero{display:grid;grid-template-columns:330px minmax(0,1fr);gap:22px;margin-bottom:15px;padding:18px;border:1px solid #dfeae5;border-radius:17px;background:linear-gradient(135deg,#edf6f2,#f8faf8)}.bracelet-stage{display:grid;place-items:center;min-height:300px;border-radius:15px;background:rgba(255,255,255,.72)}.detail-intro{display:flex;flex-direction:column;justify-content:center}.detail-tags{display:flex;align-items:center;gap:6px}.detail-tags>span:last-child{color:#99a49f;font:9px Consolas,monospace}.detail-intro h2{margin:13px 0 12px;color:#204b3e;font:700 23px Georgia,'Noto Serif SC',serif}.author-profile{display:flex;align-items:center;gap:10px}.author-profile>div{display:flex;flex-direction:column}.author-profile b{color:#405b52;font-size:12px}.author-profile span{margin-top:3px;color:#97a29e;font-size:9px}.detail-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:17px}.detail-metrics>div{display:flex;flex-direction:column;padding:10px;border-radius:10px;background:rgba(255,255,255,.72)}.detail-metrics small{color:#91a09a;font-size:9px}.detail-metrics b{margin-top:3px;color:#2e5f50;font-size:14px}.detail-time{margin-top:12px;color:#8b9994;font-size:9px}
 .inspiration-presentation{margin-bottom:15px;padding:17px;border:1px solid #dce8e3;border-radius:15px;background:#fff}.presentation-heading,.presentation-footer{display:flex;align-items:center;justify-content:space-between;gap:14px}.presentation-heading>div{display:flex;min-width:0;flex-direction:column}.presentation-heading b{color:#294c41;font-size:13px}.presentation-heading span{margin-top:3px;color:#93a09b;font-size:9px}.presentation-preview{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,.8fr);gap:10px;margin-top:14px}.presentation-preview>div{display:flex;min-width:0;flex-direction:column;padding:12px 13px;border-radius:11px;background:#f5f8f6}.presentation-preview span{color:#8e9b96;font-size:9px}.presentation-preview b,.presentation-preview p{margin:5px 0 0;overflow-wrap:anywhere;color:#34554a;font-size:12px;line-height:1.65;white-space:normal}.presentation-preview p{color:#64766f;font-weight:400}.presentation-footer{margin-top:12px;padding-top:12px;border-top:1px solid #edf1ef}.presentation-footer>span{min-width:0;color:#8b9893;font-size:9px;line-height:1.55}.presentation-footer :deep(.ant-btn){flex:none}
 .operation-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:15px}.operation-metrics>div{display:flex;align-items:center;gap:10px;padding:13px 15px;border:1px solid #e5ebe8;border-radius:13px;background:#fff}.operation-metrics>div>svg{color:#7c9a8f;font-size:17px}.operation-metrics span{display:flex;flex-direction:column}.operation-metrics small{color:#9aa49f;font-size:8px}.operation-metrics b{margin-top:2px;color:#38594e;font-size:13px}
