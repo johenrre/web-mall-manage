@@ -186,6 +186,41 @@
           </div>
         </section>
 
+        <section class="inspiration-presentation">
+          <div class="presentation-heading">
+            <div>
+              <b>灵感页展示信息</b>
+              <span>小程序灵感列表、详情页和分享实际使用的内容</span>
+            </div>
+            <a-tag :color="hasPresentationOverride(selected)?'green':'default'" :bordered="false">
+              {{ hasPresentationOverride(selected)?'已自定义':'跟随原始信息' }}
+            </a-tag>
+          </div>
+          <div class="presentation-preview">
+            <div>
+              <span>展示标题</span>
+              <b>{{ presentationTitle(selected) }}</b>
+            </div>
+            <div>
+              <span>展示副标题</span>
+              <p>{{ presentationSubtitle(selected) }}</p>
+            </div>
+            <div>
+              <span>展示署名</span>
+              <b>{{ presentationAuthorName(selected) }}</b>
+            </div>
+          </div>
+          <div class="presentation-footer">
+            <span>原作品“{{ selected.name||'未命名作品' }}”及原作者“{{ originalAuthorName(selected) }}”仍完整保留，不会被展示文案覆盖。</span>
+            <a-button
+              size="small"
+              type="primary"
+              ghost
+              @click="openReview(selected,'approve',resolvedType(selected)||'customer')"
+            >编辑展示内容</a-button>
+          </div>
+        </section>
+
         <section class="operation-metrics">
           <div><EyeOutlined /><span><small>浏览</small><b>{{ selected.view_count||0 }}</b></span></div>
           <div><HeartOutlined /><span><small>点赞</small><b>{{ selected.like_count||0 }}</b></span></div>
@@ -323,7 +358,7 @@
               type="primary"
               @click="openReview(selected,'approve',resolvedType(selected)||'customer')"
             >
-              {{ selected.inspiration_status==='approved'?'调整展示分类':'通过并展示' }}
+              {{ selected.inspiration_status==='approved'?'编辑灵感展示':'通过并展示' }}
             </a-button>
           </div>
         </div>
@@ -332,7 +367,8 @@
 
     <a-modal
       v-model:open="reviewOpen"
-      :title="reviewForm.action==='reject'?(selected?.inspiration_status==='approved'?'下架作品':'驳回作品'):'确认作品展示'"
+      :title="reviewForm.action==='reject'?(selected?.inspiration_status==='approved'?'下架作品':'驳回作品'):(selected?.inspiration_status==='approved'?'编辑灵感展示':'确认作品展示')"
+      :width="620"
       :ok-text="reviewForm.action==='reject'?'确认提交':'确认并展示'"
       :ok-button-props="{danger:reviewForm.action==='reject'}"
       :confirm-loading="saving"
@@ -352,6 +388,44 @@
           </a-radio-group>
           <span class="form-help">展示分类决定作品进入小程序中的哪个内容分区。</span>
         </a-form-item>
+        <template v-if="reviewForm.action==='approve'">
+          <div class="presentation-source">
+            <div>
+              <span>原作品标题</span>
+              <b>{{ selected?.name||'未命名作品' }}</b>
+            </div>
+            <div>
+              <span>原作者昵称</span>
+              <b>{{ selected?.nickname||`用户 ${selected?.user_id||''}` }}</b>
+            </div>
+          </div>
+          <a-form-item label="展示标题">
+            <a-input
+              v-model:value="reviewForm.title"
+              :maxlength="60"
+              show-count
+              placeholder="留空则使用原作品标题"
+            />
+          </a-form-item>
+          <a-form-item label="展示副标题">
+            <a-textarea
+              v-model:value="reviewForm.subtitle"
+              :maxlength="160"
+              show-count
+              :auto-size="{minRows:3,maxRows:6}"
+              placeholder="留空则使用小程序原有的默认介绍"
+            />
+          </a-form-item>
+          <a-form-item label="展示署名">
+            <a-input
+              v-model:value="reviewForm.authorName"
+              :maxlength="30"
+              show-count
+              placeholder="留空则使用用户原昵称"
+            />
+            <span class="form-help">以上内容只用于灵感列表、详情和分享，不会修改用户的作品名或账号昵称。</span>
+          </a-form-item>
+        </template>
         <a-form-item
           :label="reviewForm.action==='reject'?'驳回 / 下架原因':'审核备注'"
           :required="reviewForm.action==='reject'"
@@ -482,10 +556,20 @@ const detailOpen=ref(false)
 const reviewOpen=ref(false)
 const photosOpen=ref(false)
 const photoDraft=ref<string[]>([])
-const reviewForm=reactive<{action:ReviewAction;type:ReviewType;reason:string}>({
+const reviewForm=reactive<{
+  action:ReviewAction
+  type:ReviewType
+  reason:string
+  title:string
+  subtitle:string
+  authorName:string
+}>({
   action:'approve',
   type:'customer',
   reason:'',
+  title:'',
+  subtitle:'',
+  authorName:'',
 })
 
 const pagination=computed(()=>({
@@ -505,6 +589,15 @@ function resolvedType(record:Record<string,any>|undefined):ReviewType|''{
 }
 function typeLabel(value:ReviewType|''){return value==='designer'?'设计师作品':value==='customer'?'用户客订':'未分类'}
 function authorInitial(record:Record<string,any>){return String(record.nickname||record.user_id||'用').slice(0,1)}
+function originalAuthorName(record:Record<string,any>){return String(record.nickname||`用户 ${record.user_id||''}`).trim()}
+function presentationTitle(record:Record<string,any>){return String(record.inspiration_title||'').trim()||String(record.name||'未命名作品')}
+function presentationAuthorName(record:Record<string,any>){return String(record.inspiration_author_name||'').trim()||originalAuthorName(record)}
+function presentationSubtitle(record:Record<string,any>){
+  return String(record.inspiration_subtitle||'').trim()||`由 ${presentationAuthorName(record)} 创作的手串设计方案。`
+}
+function hasPresentationOverride(record:Record<string,any>){
+  return Boolean(String(record.inspiration_title||'').trim()||String(record.inspiration_subtitle||'').trim()||String(record.inspiration_author_name||'').trim())
+}
 function formatNumber(value:unknown){const number=Number(value);return Number.isFinite(number)?Number(number.toFixed(1)).toString():'0'}
 function positiveNumber(value:unknown){const number=Number(value);return Number.isFinite(number)&&number>0?formatNumber(number):''}
 function materialTypeLabel(value:string){return materialTypeLabels[value]||value||'未设置'}
@@ -555,7 +648,14 @@ function onTableChange(paginationValue:{current?:number;pageSize?:number}){
 function openDetail(row:Record<string,any>){selected.value=row;detailOpen.value=true}
 function openReview(row:Record<string,any>,action:ReviewAction,nextType:ReviewType){
   selected.value=row
-  Object.assign(reviewForm,{action,type:nextType,reason:''})
+  Object.assign(reviewForm,{
+    action,
+    type:nextType,
+    reason:'',
+    title:String(row.inspiration_title||''),
+    subtitle:String(row.inspiration_subtitle||''),
+    authorName:String(row.inspiration_author_name||''),
+  })
   reviewOpen.value=true
 }
 async function submitReview(){
@@ -566,11 +666,17 @@ async function submitReview(){
   }
   saving.value=true
   try{
+    const presentation=reviewForm.action==='approve'?{
+      inspiration_title:reviewForm.title.trim(),
+      inspiration_subtitle:reviewForm.subtitle.trim(),
+      inspiration_author_name:reviewForm.authorName.trim(),
+    }:{}
     await post('/api/admin/design_review',{
       id:selected.value.id,
       action:reviewForm.action,
       type:reviewForm.type,
       reason:reviewForm.reason.trim(),
+      ...presentation,
     })
     message.success(reviewForm.action==='reject'?'作品已停止展示':'作品展示状态已更新')
     reviewOpen.value=false
@@ -631,8 +737,9 @@ onMounted(()=>{void Promise.all([load(),loadPendingCount()])})
 .design-list-card :deep(.ant-card-body){padding:0}.list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 19px;border-bottom:1px solid #edf1ef}.list-toolbar>div{display:flex;flex-direction:column}.list-toolbar b{color:#2b4f44;font-size:14px}.list-toolbar span{margin-top:4px;color:#95a09c;font-size:10px}.design-list-card :deep(.ant-table-thead>tr>th){padding:12px 14px;color:#667870;background:#f8faf9;font-size:10px}.design-list-card :deep(.ant-table-tbody>tr>td){padding:14px}.design-list-card :deep(.design-row){cursor:pointer}.design-list-card :deep(.design-row:hover>td){background:#f6faf8!important}
 .design-cell{display:flex;align-items:center;gap:13px}.preview-button{display:grid;place-items:center;flex:0 0 82px;width:82px;height:82px;padding:0;border:1px solid #e1e9e5;border-radius:50%;background:#f8faf9;cursor:pointer}.design-cell>div:last-child{display:flex;min-width:0;flex-direction:column}.design-cell b{max-width:155px;overflow:hidden;color:#294a40;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.design-code{margin-top:4px;color:#9aa59f;font:9px Consolas,monospace}.design-cell small{margin-top:5px;color:#7f8f88;font-size:9px}.author-cell{display:flex;align-items:center;gap:10px}.author-cell>div{display:flex;min-width:0;flex-direction:column}.author-cell b{max-width:95px;overflow:hidden;color:#455c54;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.author-cell small{margin-top:4px;color:#99a39f;font-size:9px}.type-description{display:block;max-width:125px;margin-top:5px;color:#98a29e;font-size:9px;line-height:1.4}.material-summary{display:flex;flex-direction:column;gap:5px}.material-summary>div{display:grid;grid-template-columns:25px minmax(0,1fr) auto;align-items:center;gap:6px}.material-summary :deep(.ant-image),.material-summary :deep(img){border-radius:50%;object-fit:contain;background:#f0f4f2}.material-fallback{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;color:#809088;background:#edf2ef;font-size:9px}.material-summary>div>span:nth-child(2){overflow:hidden;color:#64766f;font-size:9px;text-overflow:ellipsis;white-space:nowrap}.material-summary>div>b{color:#8e6b31;font-size:9px}.material-summary>small{padding-left:31px;color:#a0aaa5;font-size:8px}.commerce-cell{display:flex;flex-direction:column}.commerce-cell>b{color:#ad762d;font-size:13px}.commerce-cell>span{margin-top:5px;color:#667a72;font-size:10px}.commerce-cell>small{margin-top:5px;color:#9aa49f;font-size:9px}.engagement-cell{display:flex;flex-direction:column;gap:5px}.engagement-cell span{display:flex;align-items:center;gap:5px;color:#71827b;font-size:10px}.engagement-cell svg{color:#9aa9a3}.status-time{display:block;margin-top:6px;color:#99a49f;font-size:9px;line-height:1.4}.row-action{white-space:nowrap}
 .design-detail-drawer :deep(.ant-drawer-body){padding:18px;background:#f7f9f8}.design-detail-drawer :deep(.ant-drawer-footer){padding:12px 18px}.detail-hero{display:grid;grid-template-columns:330px minmax(0,1fr);gap:22px;margin-bottom:15px;padding:18px;border:1px solid #dfeae5;border-radius:17px;background:linear-gradient(135deg,#edf6f2,#f8faf8)}.bracelet-stage{display:grid;place-items:center;min-height:300px;border-radius:15px;background:rgba(255,255,255,.72)}.detail-intro{display:flex;flex-direction:column;justify-content:center}.detail-tags{display:flex;align-items:center;gap:6px}.detail-tags>span:last-child{color:#99a49f;font:9px Consolas,monospace}.detail-intro h2{margin:13px 0 12px;color:#204b3e;font:700 23px Georgia,'Noto Serif SC',serif}.author-profile{display:flex;align-items:center;gap:10px}.author-profile>div{display:flex;flex-direction:column}.author-profile b{color:#405b52;font-size:12px}.author-profile span{margin-top:3px;color:#97a29e;font-size:9px}.detail-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:17px}.detail-metrics>div{display:flex;flex-direction:column;padding:10px;border-radius:10px;background:rgba(255,255,255,.72)}.detail-metrics small{color:#91a09a;font-size:9px}.detail-metrics b{margin-top:3px;color:#2e5f50;font-size:14px}.detail-time{margin-top:12px;color:#8b9994;font-size:9px}
+.inspiration-presentation{margin-bottom:15px;padding:17px;border:1px solid #dce8e3;border-radius:15px;background:#fff}.presentation-heading,.presentation-footer{display:flex;align-items:center;justify-content:space-between;gap:14px}.presentation-heading>div{display:flex;min-width:0;flex-direction:column}.presentation-heading b{color:#294c41;font-size:13px}.presentation-heading span{margin-top:3px;color:#93a09b;font-size:9px}.presentation-preview{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,.8fr);gap:10px;margin-top:14px}.presentation-preview>div{display:flex;min-width:0;flex-direction:column;padding:12px 13px;border-radius:11px;background:#f5f8f6}.presentation-preview span{color:#8e9b96;font-size:9px}.presentation-preview b,.presentation-preview p{margin:5px 0 0;overflow-wrap:anywhere;color:#34554a;font-size:12px;line-height:1.65;white-space:normal}.presentation-preview p{color:#64766f;font-weight:400}.presentation-footer{margin-top:12px;padding-top:12px;border-top:1px solid #edf1ef}.presentation-footer>span{min-width:0;color:#8b9893;font-size:9px;line-height:1.55}.presentation-footer :deep(.ant-btn){flex:none}
 .operation-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:15px}.operation-metrics>div{display:flex;align-items:center;gap:10px;padding:13px 15px;border:1px solid #e5ebe8;border-radius:13px;background:#fff}.operation-metrics>div>svg{color:#7c9a8f;font-size:17px}.operation-metrics span{display:flex;flex-direction:column}.operation-metrics small{color:#9aa49f;font-size:8px}.operation-metrics b{margin-top:2px;color:#38594e;font-size:13px}
 .detail-section{margin-bottom:15px;padding:17px;border:1px solid #e4ebe8;border-radius:15px;background:#fff}.section-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.section-title>div{display:flex;flex-direction:column}.section-title b{color:#294c41;font-size:13px}.section-title span{margin-top:3px;color:#93a09b;font-size:9px}.sequence-count{color:#8c9a94;font-size:9px}.material-table :deep(.ant-table-thead>tr>th){padding:10px 12px;background:#f7faf8;font-size:9px}.material-table :deep(.ant-table-tbody>tr>td){padding:10px 12px}.detail-material{display:flex;align-items:center;gap:10px}.material-image,:deep(.material-image img){flex:0 0 44px;border-radius:10px;object-fit:contain;background:#f3f6f5}.material-image.fallback{display:grid;place-items:center;color:#81928b}.detail-material>div:last-child{display:flex;min-width:0;flex-direction:column}.detail-material b{overflow:hidden;color:#435b53;font-size:10px;text-overflow:ellipsis;white-space:nowrap}.detail-material span,.table-secondary{display:block;margin-top:3px;color:#97a29e;font-size:8px}.render-tags{display:flex;gap:3px}.render-tags :deep(.ant-tag){font-size:8px}.material-table td:last-child span,.material-table td:last-child b{display:block}.material-table td:last-child span{color:#8b9893;font-size:8px}.material-table td:last-child b{margin-top:3px;color:#a36d2d}.sequence-scroll{display:flex;gap:8px;padding-bottom:8px;overflow-x:auto}.sequence-item{position:relative;display:flex;align-items:center;flex:0 0 74px;flex-direction:column;padding:8px 5px;border:1px solid #e8eeeb;border-radius:11px;background:#f8faf9}.sequence-item>span{position:absolute;top:4px;left:5px;color:#a4afaa;font:8px Consolas,monospace}.sequence-item :deep(img){border-radius:50%;object-fit:contain}.sequence-item>div{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:#82918b;background:#ebf0ee;font-size:10px}.sequence-item small{width:100%;margin-top:5px;overflow:hidden;color:#6e8079;font-size:8px;text-align:center;text-overflow:ellipsis;white-space:nowrap}.sequence-item em{margin-top:2px;color:#a16f36;font-size:8px;font-style:normal;font-weight:700;white-space:nowrap}.live-photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.live-photo-grid :deep(.ant-image),.live-photo-grid :deep(img){width:100%!important;aspect-ratio:1;border-radius:11px;object-fit:cover}.review-note{display:flex;align-items:flex-start;gap:10px;margin-bottom:15px;padding:13px 15px;border-radius:12px;color:#9b554f;background:#fff0ee}.review-note>div{display:flex;flex-direction:column}.review-note b{font-size:10px}.review-note span{margin-top:3px;font-size:9px;line-height:1.5}.detail-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}.detail-footer>span{color:#919e99;font-size:9px}.detail-footer>div{display:flex;gap:8px}
-.modal-alert{margin-bottom:18px}.review-type-options{display:flex}.review-type-options :deep(.ant-radio-button-wrapper){flex:1;text-align:center}.form-help{display:block;margin-top:8px;color:#929e99;font-size:10px}.photo-modal-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:14px;padding:12px 14px;border-radius:11px;background:#f5f8f6}.photo-modal-summary>div{display:flex;flex-direction:column}.photo-modal-summary b{color:#36554b;font-size:12px}.photo-modal-summary span,.photo-modal-summary small{margin-top:3px;color:#8f9c97;font-size:9px}.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}.photo-grid>div{position:relative;aspect-ratio:1}.photo-grid>div>span{position:absolute;z-index:2;top:6px;left:6px;display:grid;place-items:center;width:21px;height:21px;border-radius:7px;color:#fff;background:rgba(35,57,50,.72);font-size:9px}.photo-grid :deep(.ant-image),.photo-grid :deep(img){width:100%!important;height:100%!important;border-radius:10px;object-fit:cover}.photo-grid button{position:absolute;z-index:2;right:6px;top:6px;width:27px;height:27px;border:0;border-radius:8px;color:#fff;background:rgba(139,50,45,.88);cursor:pointer}.photo-empty{margin-top:18px}
-@media(max-width:1150px){.operation-bar{grid-template-columns:1fr}.type-filter{align-items:flex-start;flex-direction:column}.list-toolbar{align-items:flex-start;flex-direction:column}.detail-hero{grid-template-columns:1fr}.bracelet-stage{min-height:290px}}@media(max-width:760px){.header-search{width:100%}.operation-metrics{grid-template-columns:repeat(2,1fr)}.live-photo-grid,.photo-grid{grid-template-columns:repeat(2,1fr)}.detail-footer>span{display:none}.detail-footer{justify-content:flex-end}.type-filter :deep(.ant-segmented){width:100%}.type-filter :deep(.ant-segmented-group){display:grid;grid-template-columns:repeat(3,1fr)}}
+.modal-alert{margin-bottom:18px}.review-type-options{display:flex}.review-type-options :deep(.ant-radio-button-wrapper){flex:1;text-align:center}.form-help{display:block;margin-top:8px;color:#929e99;font-size:10px;line-height:1.6}.presentation-source{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px;padding:12px 14px;border-radius:11px;background:#f5f8f6}.presentation-source>div{display:flex;min-width:0;flex-direction:column}.presentation-source span{color:#929e99;font-size:10px}.presentation-source b{margin-top:4px;overflow-wrap:anywhere;color:#36554b;font-size:12px;line-height:1.5}.photo-modal-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:14px;padding:12px 14px;border-radius:11px;background:#f5f8f6}.photo-modal-summary>div{display:flex;flex-direction:column}.photo-modal-summary b{color:#36554b;font-size:12px}.photo-modal-summary span,.photo-modal-summary small{margin-top:3px;color:#8f9c97;font-size:9px}.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}.photo-grid>div{position:relative;aspect-ratio:1}.photo-grid>div>span{position:absolute;z-index:2;top:6px;left:6px;display:grid;place-items:center;width:21px;height:21px;border-radius:7px;color:#fff;background:rgba(35,57,50,.72);font-size:9px}.photo-grid :deep(.ant-image),.photo-grid :deep(img){width:100%!important;height:100%!important;border-radius:10px;object-fit:cover}.photo-grid button{position:absolute;z-index:2;right:6px;top:6px;width:27px;height:27px;border:0;border-radius:8px;color:#fff;background:rgba(139,50,45,.88);cursor:pointer}.photo-empty{margin-top:18px}
+@media(max-width:1150px){.operation-bar{grid-template-columns:1fr}.type-filter{align-items:flex-start;flex-direction:column}.list-toolbar{align-items:flex-start;flex-direction:column}.detail-hero{grid-template-columns:1fr}.bracelet-stage{min-height:290px}}@media(max-width:760px){.header-search{width:100%}.operation-metrics{grid-template-columns:repeat(2,1fr)}.presentation-preview{grid-template-columns:1fr}.presentation-footer{align-items:flex-start;flex-direction:column}.live-photo-grid,.photo-grid{grid-template-columns:repeat(2,1fr)}.detail-footer>span{display:none}.detail-footer{justify-content:flex-end}.type-filter :deep(.ant-segmented){width:100%}.type-filter :deep(.ant-segmented-group){display:grid;grid-template-columns:repeat(3,1fr)}}
 </style>
