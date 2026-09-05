@@ -207,51 +207,66 @@
           <div class="greeting-message">{{ selected.greeting_message || '历史订单未填写贺卡内容' }}</div>
         </section>
 
+        <section v-if="diyItemsOf(selected).length" class="preparation-panel checklist-section">
+          <div class="section-heading">
+            <div><h3>制作预览与备料</h3><p>左侧核对成品效果，右侧按汇总数量准备珠材</p></div>
+            <a-tag :bordered="false">{{ diyItemsOf(selected).length }} 件 DIY</a-tag>
+          </div>
+          <div class="preparation-layout">
+            <div class="bracelet-preview-list">
+              <div v-for="item in diyItemsOf(selected)" :key="`preview:${item.ref_id}`" class="sequence-bracelet">
+                <BraceletPreview :pattern="itemPattern(item)" :material-map="itemMaterialMap(item)" :size="430" interactive @activate="openBraceletZoom(item)" />
+                <b>{{ item.title||'DIY 定制手串' }}</b>
+                <small>点击手串可进一步放大查看</small>
+              </div>
+            </div>
+            <section class="material-panel preparation-material">
+              <div class="section-heading">
+                <div><h3>备料清单</h3><p>{{ selectedMaterials.length ? `${selectedMaterials.length} 种珠材，共需 ${totalRequiredBeads} 颗` : '本单没有 DIY 珠材' }}</p></div>
+                <a-button v-if="selectedMaterials.length" @click="copyMaterialList"><CopyOutlined /> 复制清单</a-button>
+              </div>
+              <a-table v-if="selectedMaterials.length" row-key="id" size="small" :columns="materialColumns" :data-source="selectedMaterials" :pagination="false" :scroll="{x:500}">
+                <template #bodyCell="{column,record}">
+                  <template v-if="column.key==='material'"><div class="material-name"><img v-if="record.image" :src="resolveMedia(record.image)"/><i v-else></i><div><b>{{ record.name }}</b><span>{{ record.category||'未分类' }}<template v-if="record.subcategory"> / {{ record.subcategory }}</template></span></div></div></template>
+                  <template v-else-if="column.key==='size'">{{ record.size ? `${record.size} mm` : '—' }}</template>
+                  <template v-else-if="column.key==='required'"><b class="required-count">{{ record.count }} 颗</b></template>
+                  <template v-else-if="column.key==='price'">{{ money(record.price) }}</template>
+                </template>
+              </a-table>
+              <a-empty v-else description="本单没有需要整理的 DIY 珠材" />
+            </section>
+          </div>
+        </section>
+
         <section v-for="item in diyItemsOf(selected)" :key="`sequence:${item.ref_id}`" class="sequence-panel checklist-section">
           <div class="section-heading">
             <div><h3>排列顺序 · {{ item.title||'DIY 定制手串' }}</h3><p>按照下单时的设计快照，从第 1 颗开始依次排列</p></div>
             <a-tag :bordered="false">{{ itemSequence(item).length }} 个位置</a-tag>
           </div>
-          <div v-if="itemSequence(item).length" class="sequence-layout">
-            <div class="sequence-bracelet">
-              <BraceletPreview :pattern="itemPattern(item)" :material-map="itemMaterialMap(item)" :size="430" interactive @activate="openBraceletZoom(item)" />
-              <b>定制手串预览</b>
-              <small>点击手串可进一步放大查看</small>
-            </div>
-            <div class="sequence-scroll">
-              <div v-for="entry in itemSequence(item)" :key="`${entry.index}-${entry.id}`" class="sequence-item" :title="`${entry.name}${entry.size ? ` · ${entry.size}mm` : ''}`">
-                <span>{{ entry.index+1 }}</span>
-                <img v-if="entry.image" :src="resolveMedia(entry.image)" :alt="entry.name" />
-                <i v-else>{{ entry.name.slice(0,1)||'珠' }}</i>
-                <small>{{ entry.name }}</small>
-                <em>{{ entry.size ? `${entry.size} mm` : '未标尺寸' }}</em>
-              </div>
+          <div v-if="itemSequence(item).length" class="sequence-scroll">
+            <div v-for="entry in itemSequence(item)" :key="`${entry.index}-${entry.id}`" class="sequence-item" :title="`${entry.name}${entry.size ? ` · ${entry.size}mm` : ''}`">
+              <span>{{ entry.index+1 }}</span>
+              <img v-if="entry.image" :src="resolveMedia(entry.image)" :alt="entry.name" />
+              <i v-else>{{ entry.name.slice(0,1)||'珠' }}</i>
+              <small>{{ entry.name }}</small>
+              <em>{{ entry.size ? `${entry.size} mm` : '未标尺寸' }}</em>
             </div>
           </div>
           <a-empty v-else description="本件商品没有排列数据" />
         </section>
 
-        <section class="material-panel checklist-section">
+        <section v-if="!diyItemsOf(selected).length" class="material-panel checklist-section">
           <div class="section-heading">
-            <div><h3>备料清单</h3><p>{{ selectedMaterials.length ? `${selectedMaterials.length} 种珠材，共需 ${totalRequiredBeads} 颗` : '本单没有 DIY 珠材' }}</p></div>
-            <a-button v-if="selectedMaterials.length" @click="copyMaterialList"><CopyOutlined /> 复制清单</a-button>
+            <div><h3>备料清单</h3><p>本单没有 DIY 珠材</p></div>
           </div>
-          <a-table v-if="selectedMaterials.length" row-key="id" size="small" :columns="materialColumns" :data-source="selectedMaterials" :pagination="false" :scroll="{x:650}">
-            <template #bodyCell="{column,record}">
-              <template v-if="column.key==='material'"><div class="material-name"><img v-if="record.image" :src="resolveMedia(record.image)"/><i v-else></i><div><b>{{ record.name }}</b><span>{{ record.category||'未分类' }}<template v-if="record.subcategory"> / {{ record.subcategory }}</template></span></div></div></template>
-              <template v-else-if="column.key==='size'">{{ record.size ? `${record.size} mm` : '—' }}</template>
-              <template v-else-if="column.key==='required'"><b class="required-count">{{ record.count }} 颗</b></template>
-              <template v-else-if="column.key==='price'">{{ money(record.price) }}</template>
-            </template>
-          </a-table>
-          <a-empty v-else description="本单没有需要整理的 DIY 珠材" />
+          <a-empty description="本单没有需要整理的 DIY 珠材" />
         </section>
       </div>
     </a-modal>
     <a-modal v-model:open="braceletZoomOpen" :title="braceletZoom?.title || '手串大图'" :footer="null" :width="600" :z-index="1300" centered>
       <div v-if="braceletZoom" class="bracelet-zoom-stage">
         <BraceletPreview :pattern="braceletZoom.pattern" :material-map="braceletZoom.materialMap" :size="430" />
-        <p>完整手串预览 · 珠材明细请查看订单下方备料清单</p>
+        <p>完整手串预览 · 珠材明细请查看备料清单</p>
       </div>
     </a-modal>
   </div>
@@ -271,7 +286,7 @@ import { designSequence as patternSequence,type DesignMaterial } from '@/utils/d
 const props=withDefaults(defineProps<{aftersales?:boolean}>(),{aftersales:false})
 type InternalFlagColor=''|'red'|'orange'|'yellow'|'green'|'blue'|'purple'|'pink'
 const flagOptions:Array<{label:string;value:Exclude<InternalFlagColor,''>;color:string}>=[{label:'红旗',value:'red',color:'#c45c55'},{label:'橙旗',value:'orange',color:'#d7863c'},{label:'黄旗',value:'yellow',color:'#d2a13d'},{label:'绿旗',value:'green',color:'#4f8b70'},{label:'蓝旗',value:'blue',color:'#5c83ad'},{label:'紫旗',value:'purple',color:'#8b75a8'},{label:'粉旗',value:'pink',color:'#c97991'}]
-const materialColumns=[{title:'珠材',key:'material',width:300},{title:'尺寸',key:'size',width:90},{title:'本单需备',key:'required',width:110},{title:'下单时单价',key:'price',width:110}]
+const materialColumns=[{title:'珠材',key:'material',width:230},{title:'尺寸',key:'size',width:72},{title:'本单需备',key:'required',width:94},{title:'下单时单价',key:'price',width:96}]
 const filters=[{label:'全部订单',value:'',dot:'#779087'},{label:'待付款',value:'pending',dot:'#d89b43'},{label:'待发货',value:'paid',dot:'#bf7e26'},{label:'已发货',value:'shipped',dot:'#4b7cae'},{label:'已完成',value:'completed',dot:'#3f8b6c'},{label:'已取消',value:'cancelled',dot:'#9ca7a2'},{label:'售后/退款',value:'refund',dot:'#c55b54'}]
 const refundMap:any={pending:{text:'待商家审核',color:'gold'},approved:{text:'待寄回商品',color:'blue'},returning:{text:'待商家收货',color:'cyan'},rejected:{text:'已拒绝',color:'red'},processing:{text:'退款处理中',color:'processing'},success:{text:'已退款',color:'green'},closed:{text:'退款关闭',color:'default'},abnormal:{text:'退款异常',color:'red'},cancelled:{text:'已撤回',color:'default'}}
 const expressCompanies=[{code:'SF',name:'顺丰速运'},{code:'YD',name:'韵达快递'},{code:'ZTO',name:'中通快递'},{code:'YTO',name:'圆通速递'},{code:'STO',name:'申通快递'},{code:'JD',name:'京东物流'},{code:'EMS',name:'邮政 EMS'},{code:'JTSD',name:'极兔速递'}]
@@ -381,7 +396,7 @@ onMounted(load)
 .refund-evidence{display:flex;align-items:flex-start;gap:16px;margin:14px 0;padding:12px;border-radius:10px;background:#f7f8f5}.refund-evidence>span{flex:0 0 auto;padding-top:6px;color:#7f8c87;font-size:11px}.refund-evidence :deep(.ant-image){overflow:hidden;margin-right:8px;border-radius:9px}.refund-evidence :deep(img){object-fit:cover}
 .return-logistics{margin-top:14px}
 .detail-checklist-entry{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 18px;border:1px solid #dce9e4;border-radius:15px;background:linear-gradient(135deg,#f1f7f4,#fbfcfb)}.detail-checklist-entry__copy{display:flex;min-width:0;align-items:center;gap:13px}.detail-checklist-entry__copy>span{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:12px;color:#2d745f;background:#e4f1eb;font-size:18px}.detail-checklist-entry h3{margin:0;color:#315248;font-size:14px}.detail-checklist-entry p{margin:4px 0 0;color:#899691;font-size:10px}.detail-checklist-entry :deep(.ant-btn-primary){flex:0 0 auto;background:#286d5a}
-.checklist-stack{display:flex;max-height:calc(100vh - 170px);flex-direction:column;gap:16px;overflow-y:auto;padding:2px 5px 4px}.checklist-section{border-radius:15px}.sequence-panel{padding:18px;border:1px solid #e5ece9;background:#fff}.sequence-panel>.section-heading{align-items:center;margin-bottom:14px}.sequence-panel>.section-heading p{margin:4px 0 0;color:#8a9792;font-size:11px}.sequence-scroll{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 9px}.sequence-item{position:relative;display:flex;align-items:center;flex:0 0 76px;flex-direction:column;padding:9px 5px 7px;border:1px solid #e5ece9;border-radius:11px;background:#f7faf8}.sequence-item>span{position:absolute;top:5px;left:6px;color:#9ca8a3;font:8px Consolas,monospace}.sequence-item img,.sequence-item>i{width:40px;height:40px;border-radius:50%;object-fit:contain}.sequence-item>i{display:grid;place-items:center;color:#73877f;background:#e8efec;font-size:10px;font-style:normal}.sequence-item small{width:100%;overflow:hidden;margin-top:5px;color:#657a72;font-size:8px;text-align:center;text-overflow:ellipsis;white-space:nowrap}.sequence-item em{margin-top:2px;color:#a16f36;font-size:8px;font-style:normal;font-weight:700;white-space:nowrap}
+.checklist-stack{display:flex;max-height:calc(100vh - 170px);flex-direction:column;gap:16px;overflow-y:auto;padding:2px 5px 4px}.checklist-section{border-radius:15px}.sequence-panel,.preparation-panel{padding:18px;border:1px solid #e5ece9;background:#fff}.sequence-panel>.section-heading,.preparation-panel>.section-heading{align-items:center;margin-bottom:14px}.sequence-panel>.section-heading p,.preparation-panel>.section-heading p{margin:4px 0 0;color:#8a9792;font-size:11px}.sequence-scroll{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 9px}.sequence-item{position:relative;display:flex;align-items:center;flex:0 0 76px;flex-direction:column;padding:9px 5px 7px;border:1px solid #e5ece9;border-radius:11px;background:#f7faf8}.sequence-item>span{position:absolute;top:5px;left:6px;color:#9ca8a3;font:8px Consolas,monospace}.sequence-item img,.sequence-item>i{width:40px;height:40px;border-radius:50%;object-fit:contain}.sequence-item>i{display:grid;place-items:center;color:#73877f;background:#e8efec;font-size:10px;font-style:normal}.sequence-item small{width:100%;overflow:hidden;margin-top:5px;color:#657a72;font-size:8px;text-align:center;text-overflow:ellipsis;white-space:nowrap}.sequence-item em{margin-top:2px;color:#a16f36;font-size:8px;font-style:normal;font-weight:700;white-space:nowrap}
 .bracelet-zoom-stage{display:flex;min-height:470px;align-items:center;flex-direction:column;justify-content:center;padding:20px;border-radius:18px;background:linear-gradient(145deg,#f8faf8,#f1f5f2)}.bracelet-zoom-stage p{margin:14px 0 0;color:#81908a;font-size:12px}
 .card-products{min-width:0}.card-product-mini{display:flex;align-items:center;min-width:0;gap:9px}.card-product-mini+.card-product-mini{margin-top:5px}.card-product-mini__preview{display:grid;width:48px;height:48px;flex:0 0 48px;place-items:center;overflow:hidden;border:1px solid #e7ece9;border-radius:10px;color:#7b8d86;background:#f3f6f4;font-size:9px}.card-product-mini__preview img{width:100%;height:100%;object-fit:cover}.card-product-mini>div:last-child{min-width:0}.card-product-mini h3{overflow:hidden;margin:0;color:#334b43;font-size:12px;text-overflow:ellipsis;white-space:nowrap}.card-product-mini p{margin:3px 0 0;color:#768780;font-size:9px}.card-products>small{display:block;margin-top:4px;color:#8d9a95;font-size:9px}.materials-empty{color:#99a59f;font-size:10px}.products-panel{padding:18px;border:1px solid #e5ece9;border-radius:16px;background:#fff}.products-panel>.section-heading{align-items:flex-start;margin-bottom:14px}.products-panel>.section-heading p{margin:4px 0 0;color:#8a9792;font-size:11px}.products-panel>.section-heading .chips{justify-content:flex-end;max-width:58%}.detail-product{display:grid;grid-template-columns:112px minmax(0,1fr) auto;align-items:center;gap:18px;padding:16px 0;border-top:1px solid #edf1ef}.detail-product__preview{display:grid;width:112px;height:112px;place-items:center;overflow:hidden;border:1px solid #e5ece9;border-radius:15px;color:#82918b;background:#f2f5f3}.detail-product__preview img{width:100%;height:100%;object-fit:cover}.detail-product__copy{min-width:0}.detail-product__copy .item-type{color:#2d745f;font-size:10px;font-weight:700;letter-spacing:.08em}.detail-product__copy h3{margin:6px 0 4px;color:#29483e;font-size:16px}.detail-product__copy p{margin:0;color:#87938f;font-size:11px}.detail-product__copy small{display:block;margin-top:8px;color:#9aa5a0}.detail-product>strong{color:#a06d2d;font:700 18px Georgia,serif;white-space:nowrap}
 .greeting-panel{padding:18px;border:1px solid #eadfd2;background:#fffcf7}.greeting-panel>.section-heading{margin-bottom:12px}.greeting-panel>.section-heading h3{color:#66533c}.greeting-panel>.section-heading p{margin:4px 0 0;color:#99866e;font-size:11px}.greeting-message{padding:14px 16px;border-left:3px solid #c8a979;border-radius:0 10px 10px 0;color:#594c3c;background:#f8f1e6;font-family:"Noto Serif SC","Songti SC",serif;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
@@ -397,7 +412,7 @@ onMounted(load)
 @media(min-width:1051px) and (max-width:1250px){.order-card__body{grid-template-columns:minmax(200px,1fr) minmax(105px,.52fr) minmax(165px,.82fr) minmax(230px,1.15fr) 132px}.card-fulfillment{display:grid}}
 @media(max-width:760px){.order-card__body{grid-template-columns:1fr}}
 .sequence-scroll{display:grid;grid-template-columns:repeat(auto-fill,76px);justify-content:start;gap:8px;overflow:visible;padding:2px 1px 4px}.sequence-item{min-width:0}
-.sequence-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:24px}.sequence-bracelet{display:flex;min-height:470px;align-items:center;flex-direction:column;justify-content:center;padding:8px 14px 14px;border-right:1px solid #e5ece9;background:linear-gradient(145deg,#fbfcfa,#f3f7f4)}.sequence-bracelet b{margin-top:4px;color:#3f5d53;font-size:12px}.sequence-bracelet small{margin-top:3px;color:#94a19c;font-size:10px}.sequence-scroll{align-content:start;padding-top:8px}
-@media(max-width:1100px){.sequence-layout{grid-template-columns:1fr}.sequence-bracelet{border-right:0;border-bottom:1px solid #e5ece9}}
+.preparation-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;gap:24px}.bracelet-preview-list{min-width:0}.sequence-bracelet{display:flex;min-height:470px;align-items:center;flex-direction:column;justify-content:center;padding:8px 14px 14px;border-right:1px solid #e5ece9;background:linear-gradient(145deg,#fbfcfa,#f3f7f4)}.sequence-bracelet+.sequence-bracelet{border-top:1px solid #e5ece9}.sequence-bracelet b{margin-top:4px;color:#3f5d53;font-size:12px}.sequence-bracelet small{margin-top:3px;color:#94a19c;font-size:10px}.preparation-material{min-width:0;padding:8px 0 8px 0;border:0;border-radius:0}.sequence-scroll{align-content:start;padding-top:8px}
+@media(max-width:1100px){.preparation-layout{grid-template-columns:1fr}.sequence-bracelet{border-right:0;border-bottom:1px solid #e5ece9}.preparation-material{padding-top:18px}}
 .sequence-scroll{grid-template-columns:repeat(auto-fill,92px);gap:10px}.sequence-item{min-height:112px;padding:11px 8px 9px}.sequence-item>span{top:7px;left:8px;font-size:10px}.sequence-item img,.sequence-item>i{width:48px;height:48px}.sequence-item small{margin-top:7px;color:#3f5850;font-size:11px;line-height:15px;font-weight:600}.sequence-item em{margin-top:3px;color:#9b6728;font-size:11px;line-height:15px;font-weight:700}
 </style>
