@@ -38,6 +38,7 @@
           <img
             v-if="bead.imageUrl"
             class="bracelet-preview__image"
+            :class="bead.imageClass"
             :src="resolveMedia(bead.imageUrl)"
             :alt="bead.name"
             loading="lazy"
@@ -63,6 +64,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { resolveMedia } from '@/utils/format'
+import { getMaterialRenderWidthMm,getStringingWidthMm } from '@/utils/materialRenderGeometry'
 import { useBranding } from '@/stores/branding'
 
 interface PreviewMaterial extends Record<string, unknown> {
@@ -73,8 +75,8 @@ interface PreviewMaterial extends Record<string, unknown> {
   stringingWidthMm: number
   stringingPosition: 'center'|'top'
   stringingOffsetMm: number
-  imageScale: number
   isIrregular: boolean
+  imageScale: number
   layer: number
 }
 
@@ -83,6 +85,7 @@ interface PreviewBead {
   name: string
   imageUrl: string
   source: PreviewMaterial
+  imageClass: Record<string,boolean>
   wrapperStyle: Record<string,string|number>
   rotatorStyle: Record<string,string>
   imageStyle: Record<string,string>
@@ -100,11 +103,13 @@ const props = withDefaults(defineProps<{
   pattern?: unknown[]|string
   materialMap?: Record<string,Record<string,unknown>>
   size?: number
+  beadSize?: number
   interactive?: boolean
 }>(), {
   pattern: () => [],
   materialMap: () => ({}),
   size: 170,
+  beadSize: 11,
   interactive: false,
 })
 
@@ -171,7 +176,7 @@ function normalizeMaterial(item:unknown,index:number):PreviewMaterial{
     ? explicitLayer
     : isIrregular?25:20
   const variants=Array.isArray(source.variants)
-    ? source.variants.map(String).filter(Boolean)
+    ? source.variants.filter((value):value is string=>typeof value==='string'&&Boolean(value.trim()))
     : []
   const displayImage=String(
     variants[index%Math.max(1,variants.length)]
@@ -203,11 +208,11 @@ function normalizeMaterial(item:unknown,index:number):PreviewMaterial{
       source.stringingOffsetMm??source.stringing_offset_mm,
       0,
     ),
+    isIrregular,
     imageScale:positiveNumber(
       source.imageScale??source.image_scale??source.imgScale??source.img_scale,
       1,
     ),
-    isIrregular,
     layer,
   }
 }
@@ -228,58 +233,69 @@ const layout=computed<PreviewLayout>(()=>{
     return{beads:[],physicalSize:Math.max(1,props.size),previewScale:1,radius:0}
   }
 
-  const circumference=materials.reduce((total,material)=>total+material.stringingWidthMm,0)
+  // This block intentionally mirrors the inspiration-card layout in
+  // miniprogram-2/components/bracelet-preview/index.ts.
+  const baseScale=Math.max(.4,positiveNumber(props.beadSize,11)/11)
+  const circumference=materials.reduce((total,material)=>total+getStringingWidthMm(material),0)
   const materialCount=Math.max(1,materials.length)
   const radius=materialCount>=3
-    ?circumference/(2*materialCount*Math.sin(Math.PI/materialCount))
-    :materials[0].sizeMm
-  const maxVisualDiameter=materials.reduce((largest,material)=>(
-    Math.max(largest,material.sizeMm*material.imageScale)
-  ),11)
-  const maxRadialOffset=materials.reduce((largest,material)=>(
-    Math.max(largest,Math.abs(material.stringingOffsetMm))
-  ),0)
+    ?circumference/(2*materialCount*Math.sin(Math.PI/materialCount))*baseScale
+    :materials[0].sizeMm*baseScale
+  const maxDiameter=materials.reduce((largest,material)=>(
+    Math.max(largest,getMaterialRenderWidthMm(material)*baseScale)
+  ),positiveNumber(props.beadSize,11))
   const physicalSize=Math.max(
     1,
-    (radius*2+maxVisualDiameter+maxRadialOffset*2)*1.1,
+    (radius*2+maxDiameter)*1.05,
   )
   const previewScale=props.size/physicalSize
   let accumulatedAngle=0
 
   const beads=materials.map((material,index)=>{
     const angleSpan=circumference>0
-      ?material.stringingWidthMm/circumference*Math.PI*2
+      ?getStringingWidthMm(material)/circumference*Math.PI*2
       :Math.PI*2/materials.length
     const angle=accumulatedAngle+angleSpan/2-Math.PI/2
     accumulatedAngle+=angleSpan
 
-    const diameter=material.sizeMm
-    const stringingRadius=Math.max(0,radius+material.stringingOffsetMm)
+    const renderWidth=getMaterialRenderWidthMm(material)*baseScale
+    const stringingRadius=radius+material.stringingOffsetMm*baseScale
     const anchorY=material.stringingPosition==='top'
-      ?Math.min(diameter,material.stringingWidthMm/2)
-      :diameter/2
+      ?getStringingWidthMm(material)*baseScale/2
+      :renderWidth/2
     const centerX=physicalSize/2+Math.cos(angle)*stringingRadius
     const centerY=physicalSize/2+Math.sin(angle)*stringingRadius
     const rotation=angle-Math.PI/2
+    // Center-strung irregular materials use their threading width. The
+    // normalizer keeps size as the fallback when no explicit width is set.
+    const usesAccessoryLayout=material.isIrregular
+    const usesTopAnchor=material.stringingPosition==='top'
 
     return{
       key:`${material.id}_${index}`,
       name:material.name,
       imageUrl:material.imageUrl,
       source:material,
+      imageClass:{
+        'bracelet-preview__image--accessory':usesAccessoryLayout,
+        'bracelet-preview__image--accessory-center':usesAccessoryLayout&&!usesTopAnchor,
+        'bracelet-preview__image--accessory-top':usesAccessoryLayout&&usesTopAnchor,
+      },
       wrapperStyle:{
-        width:`${diameter}px`,
-        height:`${diameter}px`,
-        left:`${centerX-diameter/2}px`,
+        width:`${renderWidth}px`,
+        height:`${renderWidth}px`,
+        left:`${centerX-renderWidth/2}px`,
         top:`${centerY-anchorY}px`,
         zIndex:Math.round(material.layer*10000+centerY),
       },
       rotatorStyle:{
-        transformOrigin:`${diameter/2}px ${anchorY}px`,
+        transformOrigin:`${renderWidth/2}px ${anchorY}px`,
         transform:`rotate(${rotation}rad)`,
       },
       imageStyle:{
-        transform:`scale(${material.imageScale})`,
+        transform:usesAccessoryLayout&&!usesTopAnchor
+          ?'translateY(-50%)'
+          :'',
       },
       fallbackStyle:fallbackStyle(material.id),
     }
@@ -290,5 +306,5 @@ const layout=computed<PreviewLayout>(()=>{
 </script>
 
 <style scoped>
-.bracelet-preview{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:visible;border-radius:50%;background:radial-gradient(circle,rgba(32,86,71,.02) 36%,rgba(32,86,71,.055) 37%,transparent 40%)}.bracelet-preview--interactive{outline:none;cursor:zoom-in;transition:transform .16s ease,filter .16s ease}.bracelet-preview--interactive:hover,.bracelet-preview--interactive:focus-visible{filter:drop-shadow(0 7px 14px rgba(34,72,61,.12));transform:scale(1.025)}.bracelet-preview__inner{position:relative;z-index:0;flex:0 0 auto;transform-origin:center}.bracelet-preview__guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:1px solid rgba(66,104,92,.075);border-radius:50%;box-shadow:0 2px 8px rgba(36,71,61,.04)}.bracelet-preview__bead{position:absolute;display:flex;align-items:center;justify-content:center;outline:none}.bracelet-preview__rotator{position:relative;width:100%;height:100%}.bracelet-preview__image{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center;filter:drop-shadow(0 1px 1.5px rgba(43,34,24,.2))}.bracelet-preview__fallback{width:100%;height:100%;border:1px solid rgba(77,61,44,.14);border-radius:50%;box-shadow:0 1px 3px rgba(51,41,29,.15)}.center-mark{position:absolute;z-index:1;top:50%;left:50%;display:grid;overflow:hidden;place-items:center;transform:translate(-50%,-50%);border:1px solid rgba(75,104,94,.18);border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 2px 8px rgba(36,71,61,.08)}.center-mark img{display:block;width:82%;height:82%;border-radius:50%;object-fit:contain}.empty{position:absolute;inset:0;display:grid;place-items:center;color:#a4afa9;font-size:12px}
+.bracelet-preview{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:visible;border-radius:50%;background:radial-gradient(circle,rgba(32,86,71,.02) 36%,rgba(32,86,71,.055) 37%,transparent 40%)}.bracelet-preview--interactive{outline:none;cursor:zoom-in;transition:transform .16s ease,filter .16s ease}.bracelet-preview--interactive:hover,.bracelet-preview--interactive:focus-visible{filter:drop-shadow(0 7px 14px rgba(34,72,61,.12));transform:scale(1.025)}.bracelet-preview__inner{position:relative;z-index:0;flex:0 0 auto;transform-origin:center}.bracelet-preview__guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:1px solid rgba(66,104,92,.075);border-radius:50%;box-shadow:0 2px 8px rgba(36,71,61,.04)}.bracelet-preview__bead{position:absolute;display:flex;align-items:center;justify-content:center;outline:none}.bracelet-preview__rotator{position:relative;width:100%;height:100%}.bracelet-preview__image{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center;filter:drop-shadow(0 1px 1.5px rgba(43,34,24,.2))}.bracelet-preview__image--accessory{position:absolute;left:0;width:100%;height:auto}.bracelet-preview__image--accessory-center{top:50%;transform-origin:50% 50%}.bracelet-preview__image--accessory-top{top:0;transform-origin:50% 0}.bracelet-preview__fallback{width:100%;height:100%;border:1px solid rgba(77,61,44,.14);border-radius:50%;box-shadow:0 1px 3px rgba(51,41,29,.15)}.center-mark{position:absolute;z-index:1;top:50%;left:50%;display:grid;overflow:hidden;place-items:center;transform:translate(-50%,-50%);border:1px solid rgba(75,104,94,.18);border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 2px 8px rgba(36,71,61,.08)}.center-mark img{display:block;width:82%;height:82%;border-radius:50%;object-fit:contain}.empty{position:absolute;inset:0;display:grid;place-items:center;color:#a4afa9;font-size:12px}
 </style>
